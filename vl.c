@@ -25,6 +25,16 @@
 #include "qemu/cutils.h"
 #include "qemu/help_option.h"
 
+#ifdef CONFIG_FLEXUS
+#include "libqemuflex/flexus_proxy.h"
+
+char* sim_path = NULL;
+int timing_mode = 0;
+extern int flexus_is_simulating;
+extern int64_t flexus_simulation_length;
+#endif /* CONFIG_FLEXUS */
+
+
 #ifdef CONFIG_SECCOMP
 #include "sysemu/seccomp.h"
 #endif
@@ -1921,6 +1931,11 @@ static bool main_loop_should_exit(void)
 
 static void main_loop(void)
 {
+#ifdef CONFIG_FLEXUS
+  if( simulator_prepare != NULL )
+    simulator_prepare();
+#endif
+
     bool nonblocking;
     int last_io = 0;
 #ifdef CONFIG_PROFILER
@@ -3570,6 +3585,30 @@ int main(int argc, char **argv, char **envp)
                     default_monitor = 0;
                 }
                 break;
+#ifdef CONFIG_FLEXUS
+	    case QEMU_OPTION_simpath:
+	      if( sim_path != NULL ) {
+		fprintf(stderr, "qemu: only one simulator can be loaded\n");
+		return 1;
+	      }
+	      sim_path = (char*)malloc(sizeof(char) * (strlen(optarg) + 1));
+	      strcpy(sim_path, optarg);
+	      break;
+	    case QEMU_OPTION_timing:
+	      timing_mode = 1;
+	      break;
+	    case QEMU_OPTION_startsimulation:
+	      flexus_is_simulating = 1;
+	      break;
+	    case QEMU_OPTION_simulatefor:
+	      if( flexus_simulation_length != -1 ) {
+		fprintf(stderr, "qemu: the simulation length shoudl only be provided once\n");
+		return 1;
+	      }
+	      flexus_simulation_length = atol(optarg);
+	      break;
+#endif /* CONFIG_FLEXUS */
+
             case QEMU_OPTION_watchdog:
                 if (watchdog) {
                     error_report("only one watchdog option may be given");
@@ -4652,6 +4691,25 @@ int main(int argc, char **argv, char **envp)
     }
 
     os_setup_post();
+
+#ifdef CONFIG_FLEXUS	//Start flexus
+    QEMU_initialize();
+
+    simulator_obj_t* simulator = NULL;
+    if( sim_path != NULL )
+      simulator = simulator_load( sim_path );
+
+    QFLEX_API_Interface_Hooks_t* hooks = (QFLEX_API_Interface_Hooks_t*)malloc(sizeof(QFLEX_API_Interface_Hooks_t));
+    QFLEX_API_get_interface_hooks(hooks);
+
+    if( simulator_init != NULL )
+      simulator_init(hooks);
+
+    free(hooks);
+
+    // trigger the periodic event
+    QEMU_execute_callbacks(-1, 0, 0);
+#endif
 
     main_loop();
     replay_disable_events();

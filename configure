@@ -321,6 +321,13 @@ numa=""
 tcmalloc="no"
 jemalloc="no"
 
+#**********************************************
+# Adding flexus code
+# flexus support
+flexus="no"
+# End of flexus code
+#**********************************************
+
 # parse CC options first
 for opt do
   optarg=`expr "x$opt" : 'x[^=]*=\(.*\)'`
@@ -824,6 +831,14 @@ for opt do
   ;;
   --without-pixman) pixman="none"
   ;;
+  # *********************************************************
+  # Adding flexus code
+   --disable-flexus) flexus="no"
+  ;;
+  --enable-flexus) flexus="yes"
+  ;;
+  # End of flexus code 
+  #**********************************************************
   --disable-sdl) sdl="no"
   ;;
   --enable-sdl) sdl="yes"
@@ -1369,6 +1384,9 @@ disabled with --disable-FEATURE, default is enabled if available:
   numa            libnuma support
   tcmalloc        tcmalloc support
   jemalloc        jemalloc support
+  flexus          disable support for the Flexus simulator
+  flexus          enable support for the Flexus simulator
+  
 
 NOTE: The object files are built at the place where configure is launched
 EOF
@@ -4718,6 +4736,18 @@ EOF
   fi
 fi
 
+# *********************************************************
+# Adding flexus code
+if test "$flexus" = "yes" ; then
+  QEMU_CFLAGS="-DCONFIG_FLEXUS $QEMU_CFLAGS -ldl"
+  LIBS="-ldl $LIBS" 
+fi
+# End of flexus code 
+#**********************************************************
+
+
+
+
 # prepend pixman and ftd flags after all config tests are done
 QEMU_CFLAGS="$pixman_cflags $fdt_cflags $QEMU_CFLAGS"
 libs_softmmu="$pixman_libs $libs_softmmu"
@@ -4868,6 +4898,12 @@ echo "NUMA host support $numa"
 echo "tcmalloc support  $tcmalloc"
 echo "jemalloc support  $jemalloc"
 echo "avx2 optimization $avx2_opt"
+# *********************************************************
+# Adding flexus code
+echo "Flexus support    $flexus"
+# End of flexus code 
+#**********************************************************
+
 
 if test "$sdl_too_old" = "yes"; then
 echo "-> Your SDL version is too old - please upgrade to have SDL support"
@@ -5776,6 +5812,13 @@ fi
 if test "$target_softmmu" = "yes" ; then
   echo "CONFIG_SOFTMMU=y" >> $config_target_mak
 fi
+# *********************************************************
+# Adding flexus code
+if test "$flexus" = "yes" ; then
+  echo "CONFIG_FLEXUS=y" >> $config_target_mak
+fi
+# End of flexus code 
+#**********************************************************
 if test "$target_user_only" = "yes" ; then
   echo "CONFIG_USER_ONLY=y" >> $config_target_mak
   echo "CONFIG_QEMU_INTERP_PREFIX=\"$interp_prefix1\"" >> $config_target_mak

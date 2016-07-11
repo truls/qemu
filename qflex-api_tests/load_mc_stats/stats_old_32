@@ -1,0 +1,453 @@
+Opening debug output file: debug.out
+Opening debug output file: stats.out
+Opening debug output file: trace.out
+DEBUG ERROR: Failed to parse debug configurations from debug.cfg
+all
+   Nodes-L1d-Hits:Evict:Exclusive           0
+   Nodes-L1d-Hits:Evict:Migratory           0
+   Nodes-L1d-Hits:Evict:Modified            0
+   Nodes-L1d-Hits:Evict:Owned               0
+   Nodes-L1d-Hits:Evict:Shared              0
+   Nodes-L1d-Hits:EvictD:Exclusive          0
+   Nodes-L1d-Hits:EvictD:Migratory          0
+   Nodes-L1d-Hits:EvictD:Modified           0
+   Nodes-L1d-Hits:EvictWritable:Exclusive   0
+   Nodes-L1d-Hits:EvictWritable:Migratory   0
+   Nodes-L1d-Hits:EvictWritable:Modified    0
+   Nodes-L1d-Hits:Fetch:Exclusive           0
+   Nodes-L1d-Hits:Fetch:Migratory           0
+   Nodes-L1d-Hits:Fetch:Modified            0
+   Nodes-L1d-Hits:Fetch:Owned               0
+   Nodes-L1d-Hits:Fetch:Shared              0
+   Nodes-L1d-Hits:NAW:Exclusive             0
+   Nodes-L1d-Hits:NAW:Migratory             0
+   Nodes-L1d-Hits:NAW:Modified              0
+   Nodes-L1d-Hits:Read:Exclusive            21396278
+   Nodes-L1d-Hits:Read:Migratory            0
+   Nodes-L1d-Hits:Read:Modified             112981
+   Nodes-L1d-Hits:Read:Owned                0
+   Nodes-L1d-Hits:Read:Shared               25864705
+   Nodes-L1d-Hits:Upgrade:Exclusive         0
+   Nodes-L1d-Hits:Upgrade:Migratory         0
+   Nodes-L1d-Hits:Upgrade:Modified          0
+   Nodes-L1d-Hits:Write:Exclusive           213
+   Nodes-L1d-Hits:Write:Migratory           0
+   Nodes-L1d-Hits:Write:Modified            89944
+   Nodes-L1d-Misses:Evict:Invalid           0
+   Nodes-L1d-Misses:EvictD:Invalid          0
+   Nodes-L1d-Misses:EvictD:Owned            0
+   Nodes-L1d-Misses:EvictD:Shared           0
+   Nodes-L1d-Misses:EvictWritable:Invalid   0
+   Nodes-L1d-Misses:EvictWritable:Owned     0
+   Nodes-L1d-Misses:EvictWritable:Shared    0
+   Nodes-L1d-Misses:Fetch:Invalid           0
+   Nodes-L1d-Misses:NAW:Invalid             0
+   Nodes-L1d-Misses:NAW:Owned               0
+   Nodes-L1d-Misses:NAW:Shared              0
+   Nodes-L1d-Misses:Read:Invalid            33181
+   Nodes-L1d-Misses:Upgrade:Invalid         0
+   Nodes-L1d-Misses:Upgrade:Owned           0
+   Nodes-L1d-Misses:Upgrade:Shared          0
+   Nodes-L1d-Misses:Write:Invalid           3338
+   Nodes-L1d-Misses:Write:Owned             0
+   Nodes-L1d-Misses:Write:Shared            833
+   Nodes-L1d-PrefetchHits:ButUpgrade        0
+   Nodes-L1d-PrefetchHits:Evict             0
+   Nodes-L1d-PrefetchHits:Read              0
+   Nodes-L1d-PrefetchHits:Write             0
+   Nodes-L1d-Snoops:Downgrade:Exclusive     0
+   Nodes-L1d-Snoops:Downgrade:Invalid       0
+   Nodes-L1d-Snoops:Downgrade:Migratory     0
+   Nodes-L1d-Snoops:Downgrade:Modified      0
+   Nodes-L1d-Snoops:Downgrade:Owned         0
+   Nodes-L1d-Snoops:Downgrade:Shared        0
+   Nodes-L1d-Snoops:Invalidate:Exclusive    0
+   Nodes-L1d-Snoops:Invalidate:Invalid      0
+   Nodes-L1d-Snoops:Invalidate:Migratory    0
+   Nodes-L1d-Snoops:Invalidate:Modified     13
+   Nodes-L1d-Snoops:Invalidate:Owned        0
+   Nodes-L1d-Snoops:Invalidate:Shared       106
+   Nodes-L1d-Snoops:ReturnReq:Exclusive     472
+   Nodes-L1d-Snoops:ReturnReq:Invalid       0
+   Nodes-L1d-Snoops:ReturnReq:Migratory     0
+   Nodes-L1d-Snoops:ReturnReq:Modified      819
+   Nodes-L1d-Snoops:ReturnReq:Owned         0
+   Nodes-L1d-Snoops:ReturnReq:Shared        9640
+   Nodes-L1d-TagMatchesInvalid              0
+   Nodes-L1i-Hits:Evict:Exclusive           0
+   Nodes-L1i-Hits:Evict:Migratory           0
+   Nodes-L1i-Hits:Evict:Modified            0
+   Nodes-L1i-Hits:Evict:Owned               0
+   Nodes-L1i-Hits:Evict:Shared              0
+   Nodes-L1i-Hits:EvictD:Exclusive          0
+   Nodes-L1i-Hits:EvictD:Migratory          0
+   Nodes-L1i-Hits:EvictD:Modified           0
+   Nodes-L1i-Hits:EvictWritable:Exclusive   0
+   Nodes-L1i-Hits:EvictWritable:Migratory   0
+   Nodes-L1i-Hits:EvictWritable:Modified    0
+   Nodes-L1i-Hits:Fetch:Exclusive           0
+   Nodes-L1i-Hits:Fetch:Migratory           0
+   Nodes-L1i-Hits:Fetch:Modified            0
+   Nodes-L1i-Hits:Fetch:Owned               0
+   Nodes-L1i-Hits:Fetch:Shared              310265609
+   Nodes-L1i-Hits:NAW:Exclusive             0
+   Nodes-L1i-Hits:NAW:Migratory             0
+   Nodes-L1i-Hits:NAW:Modified              0
+   Nodes-L1i-Hits:Read:Exclusive            0
+   Nodes-L1i-Hits:Read:Migratory            0
+   Nodes-L1i-Hits:Read:Modified             0
+   Nodes-L1i-Hits:Read:Owned                0
+   Nodes-L1i-Hits:Read:Shared               0
+   Nodes-L1i-Hits:Upgrade:Exclusive         0
+   Nodes-L1i-Hits:Upgrade:Migratory         0
+   Nodes-L1i-Hits:Upgrade:Modified          0
+   Nodes-L1i-Hits:Write:Exclusive           0
+   Nodes-L1i-Hits:Write:Migratory           0
+   Nodes-L1i-Hits:Write:Modified            0
+   Nodes-L1i-Misses:Evict:Invalid           0
+   Nodes-L1i-Misses:EvictD:Invalid          0
+   Nodes-L1i-Misses:EvictD:Owned            0
+   Nodes-L1i-Misses:EvictD:Shared           0
+   Nodes-L1i-Misses:EvictWritable:Invalid   0
+   Nodes-L1i-Misses:EvictWritable:Owned     0
+   Nodes-L1i-Misses:EvictWritable:Shared    0
+   Nodes-L1i-Misses:Fetch:Invalid           21759
+   Nodes-L1i-Misses:NAW:Invalid             0
+   Nodes-L1i-Misses:NAW:Owned               0
+   Nodes-L1i-Misses:NAW:Shared              0
+   Nodes-L1i-Misses:Read:Invalid            0
+   Nodes-L1i-Misses:Upgrade:Invalid         0
+   Nodes-L1i-Misses:Upgrade:Owned           0
+   Nodes-L1i-Misses:Upgrade:Shared          0
+   Nodes-L1i-Misses:Write:Invalid           0
+   Nodes-L1i-Misses:Write:Owned             0
+   Nodes-L1i-Misses:Write:Shared            0
+   Nodes-L1i-PrefetchHits:ButUpgrade        0
+   Nodes-L1i-PrefetchHits:Evict             0
+   Nodes-L1i-PrefetchHits:Read              0
+   Nodes-L1i-PrefetchHits:Write             0
+   Nodes-L1i-Snoops:Downgrade:Exclusive     0
+   Nodes-L1i-Snoops:Downgrade:Invalid       0
+   Nodes-L1i-Snoops:Downgrade:Migratory     0
+   Nodes-L1i-Snoops:Downgrade:Modified      0
+   Nodes-L1i-Snoops:Downgrade:Owned         0
+   Nodes-L1i-Snoops:Downgrade:Shared        0
+   Nodes-L1i-Snoops:Invalidate:Exclusive    0
+   Nodes-L1i-Snoops:Invalidate:Invalid      0
+   Nodes-L1i-Snoops:Invalidate:Migratory    0
+   Nodes-L1i-Snoops:Invalidate:Modified     0
+   Nodes-L1i-Snoops:Invalidate:Owned        0
+   Nodes-L1i-Snoops:Invalidate:Shared       840
+   Nodes-L1i-Snoops:ReturnReq:Exclusive     0
+   Nodes-L1i-Snoops:ReturnReq:Invalid       0
+   Nodes-L1i-Snoops:ReturnReq:Migratory     0
+   Nodes-L1i-Snoops:ReturnReq:Modified      0
+   Nodes-L1i-Snoops:ReturnReq:Owned         0
+   Nodes-L1i-Snoops:ReturnReq:Shared        47
+   Nodes-L1i-TagMatchesInvalid              0
+   Nodes-bpwarm-branches                    60285518
+   Nodes-bpwarm-branches:call               13113640
+   Nodes-bpwarm-branches:conditional        47156777
+   Nodes-bpwarm-branches:return             15097
+   Nodes-bpwarm-branches:unconditional      4
+   Nodes-bpwarm-correct                     60269255
+   Nodes-bpwarm-correct:bimodal             47146807
+   Nodes-bpwarm-correct:gshare              9277
+   Nodes-bpwarm-correct:unconditional       13113171
+   Nodes-bpwarm-mispredict                  16263
+   Nodes-bpwarm-mispredict:direction        0
+   Nodes-bpwarm-mispredict:meta             3
+   Nodes-bpwarm-mispredict:meta:chose_bimod 0
+   Nodes-bpwarm-mispredict:meta:chose_gshare 3
+   Nodes-bpwarm-mispredict:new              1056
+   Nodes-bpwarm-mispredict:target           15204
+   Nodes-bpwarm-predictions                 60269587
+   Nodes-bpwarm-predictions:bimodal         47147092
+   Nodes-bpwarm-predictions:gshare          9285
+   Nodes-bpwarm-predictions:unconditional   13113210
+   Nodes-feeder-CASOps                      0
+   Nodes-feeder-Fetches                     310288554
+   Nodes-feeder-ICount                      250000000
+   Nodes-feeder-IOOps                       1946
+   Nodes-feeder-LoadExOps                   0
+   Nodes-feeder-LoadOps                     47407340
+   Nodes-feeder-MemOps                      47501718
+   Nodes-feeder-OS:CASOps                   0
+   Nodes-feeder-OS:Fetches                  520120
+   Nodes-feeder-OS:IOOps                    1946
+   Nodes-feeder-OS:LoadExOps                0
+   Nodes-feeder-OS:LoadOps                  144232
+   Nodes-feeder-OS:MemOps                   238610
+   Nodes-feeder-OS:PrefetchOps              0
+   Nodes-feeder-OS:RMWOps                   0
+   Nodes-feeder-OS:StoreExOps               0
+   Nodes-feeder-OS:StoreOps                 94378
+   Nodes-feeder-OS:UncacheableOps           0
+   Nodes-feeder-PrefetchOps                 0
+   Nodes-feeder-RMWOps                      0
+   Nodes-feeder-StoreExOps                  0
+   Nodes-feeder-StoreOps                    94378
+   Nodes-feeder-UncacheableOps              0
+   Nodes-feeder-User:CASOps                 0
+   Nodes-feeder-User:Fetches                309768434
+   Nodes-feeder-User:IOOps                  0
+   Nodes-feeder-User:LoadExOps              0
+   Nodes-feeder-User:LoadOps                47263108
+   Nodes-feeder-User:MemOps                 47263108
+   Nodes-feeder-User:PrefetchOps            0
+   Nodes-feeder-User:RMWOps                 0
+   Nodes-feeder-User:StoreExOps             0
+   Nodes-feeder-User:StoreOps               0
+   Nodes-feeder-User:UncacheableOps         0
+   sys-L2-EvictClean:kExclusive:ManySharers 10033
+   sys-L2-EvictClean:kExclusive:OneSharer   197
+   sys-L2-EvictClean:kExclusive:ZeroSharers 0
+   sys-L2-EvictClean:kInvalid:ManySharers   0
+   sys-L2-EvictClean:kInvalid:OneSharer     0
+   sys-L2-EvictClean:kInvalid:ZeroSharers   0
+   sys-L2-EvictClean:kModified:ManySharers  27
+   sys-L2-EvictClean:kModified:OneSharer    3
+   sys-L2-EvictClean:kModified:ZeroSharers  0
+   sys-L2-EvictClean:kShared:ManySharers    9592
+   sys-L2-EvictClean:kShared:OneSharer      10407
+   sys-L2-EvictClean:kShared:ZeroSharers    0
+   sys-L2-EvictDirty:kExclusive:ManySharers 0
+   sys-L2-EvictDirty:kExclusive:OneSharer   168
+   sys-L2-EvictDirty:kExclusive:ZeroSharers 0
+   sys-L2-EvictDirty:kInvalid:ManySharers   0
+   sys-L2-EvictDirty:kInvalid:OneSharer     8734
+   sys-L2-EvictDirty:kInvalid:ZeroSharers   0
+   sys-L2-EvictDirty:kModified:ManySharers  0
+   sys-L2-EvictDirty:kModified:OneSharer    0
+   sys-L2-EvictDirty:kModified:ZeroSharers  0
+   sys-L2-EvictDirty:kShared:ManySharers    0
+   sys-L2-EvictDirty:kShared:OneSharer      0
+   sys-L2-EvictDirty:kShared:ZeroSharers    0
+   sys-L2-EvictWritable:kExclusive:ManySharers 0
+   sys-L2-EvictWritable:kExclusive:OneSharer 16440
+   sys-L2-EvictWritable:kExclusive:ZeroSharers 0
+   sys-L2-EvictWritable:kInvalid:ManySharers 0
+   sys-L2-EvictWritable:kInvalid:OneSharer  0
+   sys-L2-EvictWritable:kInvalid:ZeroSharers 0
+   sys-L2-EvictWritable:kModified:ManySharers 0
+   sys-L2-EvictWritable:kModified:OneSharer 0
+   sys-L2-EvictWritable:kModified:ZeroSharers 0
+   sys-L2-EvictWritable:kShared:ManySharers 0
+   sys-L2-EvictWritable:kShared:OneSharer   0
+   sys-L2-EvictWritable:kShared:ZeroSharers 0
+   sys-L2-FetchReq:kExclusive:ManySharers   92
+   sys-L2-FetchReq:kExclusive:OneSharer     63
+   sys-L2-FetchReq:kExclusive:ZeroSharers   46
+   sys-L2-FetchReq:kInvalid:ManySharers     0
+   sys-L2-FetchReq:kInvalid:OneSharer       709
+   sys-L2-FetchReq:kInvalid:ZeroSharers     891
+   sys-L2-FetchReq:kModified:ManySharers    7
+   sys-L2-FetchReq:kModified:OneSharer      1
+   sys-L2-FetchReq:kModified:ZeroSharers    103
+   sys-L2-FetchReq:kShared:ManySharers      0
+   sys-L2-FetchReq:kShared:OneSharer        9757
+   sys-L2-FetchReq:kShared:ZeroSharers      10093
+   sys-L2-Fetches:Off:PotentialSharers      
+     Count     Pct      Value
+      891       100.00% 0
+      --------- ------- ----------
+      891       100.00% 1 elements
+     Average value: 0.00      
+
+   sys-L2-Fetches:OffChip                   891
+   sys-L2-Fetches:On:AdditionalSharers      
+     Count     Pct      Value
+      20871     100.00% 0
+      --------- ------- ----------
+      20871     100.00% 1 elements
+     Average value: 0.00      
+
+   sys-L2-Fetches:On:PotentialSharers       
+     Count     Pct      Value
+      20098      96.30% 0
+      773         3.70% 1
+      --------- ------- ----------
+      20871     100.00% 2 elements
+     Average value: 0.04      
+
+   sys-L2-Fetches:On:WrongSharers           
+     Count     Pct      Value
+      20871     100.00% 0
+      --------- ------- ----------
+      20871     100.00% 1 elements
+     Average value: 0.00      
+
+   sys-L2-Fetches:OnChip                    20871
+   sys-L2-Hits:Fetch                        20098
+   sys-L2-Hits:NAStore                      0
+   sys-L2-Hits:Read                         21970
+   sys-L2-Hits:Write                        3084
+   sys-L2-Misses:Offchip:Fetch              891
+   sys-L2-Misses:Offchip:NAStore            0
+   sys-L2-Misses:Offchip:Read               1006
+   sys-L2-Misses:Offchip:Write              142
+   sys-L2-Misses:Onchip:Fetch               773
+   sys-L2-Misses:Onchip:NAStore             0
+   sys-L2-Misses:Onchip:Read                10208
+   sys-L2-Misses:Onchip:Write               119
+   sys-L2-NoStat                            0
+   sys-L2-NonAllocatingStoreReq:kExclusive:ManySharers 0
+   sys-L2-NonAllocatingStoreReq:kExclusive:OneSharer 0
+   sys-L2-NonAllocatingStoreReq:kExclusive:ZeroSharers 0
+   sys-L2-NonAllocatingStoreReq:kInvalid:ManySharers 0
+   sys-L2-NonAllocatingStoreReq:kInvalid:OneSharer 0
+   sys-L2-NonAllocatingStoreReq:kInvalid:ZeroSharers 0
+   sys-L2-NonAllocatingStoreReq:kModified:ManySharers 0
+   sys-L2-NonAllocatingStoreReq:kModified:OneSharer 0
+   sys-L2-NonAllocatingStoreReq:kModified:ZeroSharers 0
+   sys-L2-NonAllocatingStoreReq:kShared:ManySharers 0
+   sys-L2-NonAllocatingStoreReq:kShared:OneSharer 0
+   sys-L2-NonAllocatingStoreReq:kShared:ZeroSharers 0
+   sys-L2-ReadReq:kExclusive:ManySharers    6
+   sys-L2-ReadReq:kExclusive:OneSharer      10121
+   sys-L2-ReadReq:kExclusive:ZeroSharers    16365
+   sys-L2-ReadReq:kInvalid:ManySharers      0
+   sys-L2-ReadReq:kInvalid:OneSharer        87
+   sys-L2-ReadReq:kInvalid:ZeroSharers      1006
+   sys-L2-ReadReq:kModified:ManySharers     0
+   sys-L2-ReadReq:kModified:OneSharer       20
+   sys-L2-ReadReq:kModified:ZeroSharers     5478
+   sys-L2-ReadReq:kShared:ManySharers       0
+   sys-L2-ReadReq:kShared:OneSharer         101
+   sys-L2-ReadReq:kShared:ZeroSharers       0
+   sys-L2-Reads:Off:PotentialSharers        
+     Count     Pct      Value
+      1006      100.00% 0
+      --------- ------- ----------
+      1006      100.00% 1 elements
+     Average value: 0.00      
+
+   sys-L2-Reads:OffChip                     1006
+   sys-L2-Reads:On:AdditionalSharers        
+     Count     Pct      Value
+      32178     100.00% 0
+      --------- ------- ----------
+      32178     100.00% 1 elements
+     Average value: 0.00      
+
+   sys-L2-Reads:On:PotentialSharers         
+     Count     Pct      Value
+      21970      68.28% 0
+      10208      31.72% 1
+      --------- ------- ----------
+      32178     100.00% 2 elements
+     Average value: 0.32      
+
+   sys-L2-Reads:On:WrongSharers             
+     Count     Pct      Value
+      32178     100.00% 0
+      --------- ------- ----------
+      32178     100.00% 1 elements
+     Average value: 0.00      
+
+   sys-L2-Reads:OnChip                      32178
+   sys-L2-Snoop:Hits                        11940
+   sys-L2-Snoop:Misses                      0
+   sys-L2-UpgradeReq:kExclusive:ManySharers 12
+   sys-L2-UpgradeReq:kExclusive:OneSharer   0
+   sys-L2-UpgradeReq:kExclusive:ZeroSharers 0
+   sys-L2-UpgradeReq:kInvalid:ManySharers   0
+   sys-L2-UpgradeReq:kInvalid:OneSharer     0
+   sys-L2-UpgradeReq:kInvalid:ZeroSharers   0
+   sys-L2-UpgradeReq:kModified:ManySharers  811
+   sys-L2-UpgradeReq:kModified:OneSharer    3
+   sys-L2-UpgradeReq:kModified:ZeroSharers  0
+   sys-L2-UpgradeReq:kShared:ManySharers    7
+   sys-L2-UpgradeReq:kShared:OneSharer      0
+   sys-L2-UpgradeReq:kShared:ZeroSharers    0
+   sys-L2-Upgrades:On:AdditionalSharers     
+     Count     Pct      Value
+      833       100.00% 0
+      --------- ------- ----------
+      833       100.00% 1 elements
+     Average value: 0.00      
+
+   sys-L2-Upgrades:On:PotentialSharers      
+     Count     Pct      Value
+      822        98.68% 2
+      8           0.96% 3
+      3           0.36% 0
+      --------- ------- ----------
+      833       100.00% 3 elements
+     Average value: 2.00      
+
+   sys-L2-Upgrades:On:WrongSharers          
+     Count     Pct      Value
+      833       100.00% 0
+      --------- ------- ----------
+      833       100.00% 1 elements
+     Average value: 0.00      
+
+   sys-L2-Upgrades:OnChip                   833
+   sys-L2-WriteReq:kExclusive:ManySharers   0
+   sys-L2-WriteReq:kExclusive:OneSharer     0
+   sys-L2-WriteReq:kExclusive:ZeroSharers   17
+   sys-L2-WriteReq:kInvalid:ManySharers     0
+   sys-L2-WriteReq:kInvalid:OneSharer       13
+   sys-L2-WriteReq:kInvalid:ZeroSharers     142
+   sys-L2-WriteReq:kModified:ManySharers    2
+   sys-L2-WriteReq:kModified:OneSharer      102
+   sys-L2-WriteReq:kModified:ZeroSharers    3067
+   sys-L2-WriteReq:kShared:ManySharers      0
+   sys-L2-WriteReq:kShared:OneSharer        2
+   sys-L2-WriteReq:kShared:ZeroSharers      0
+   sys-L2-Writes:Off:PotentialSharers       
+     Count     Pct      Value
+      142       100.00% 0
+      --------- ------- ----------
+      142       100.00% 1 elements
+     Average value: 0.00      
+
+   sys-L2-Writes:OffChip                    142
+   sys-L2-Writes:On:AdditionalSharers       
+     Count     Pct      Value
+      3203      100.00% 0
+      --------- ------- ----------
+      3203      100.00% 1 elements
+     Average value: 0.00      
+
+   sys-L2-Writes:On:PotentialSharers        
+     Count     Pct      Value
+      3084       96.28% 0
+      117         3.65% 1
+      2           0.06% 2
+      --------- ------- ----------
+      3203      100.00% 3 elements
+     Average value: 0.04      
+
+   sys-L2-Writes:On:WrongSharers            
+     Count     Pct      Value
+      3203      100.00% 0
+      --------- ------- ----------
+      3203      100.00% 1 elements
+     Average value: 0.00      
+
+   sys-L2-Writes:OnChip                     3203
+   sys-L2Fetches:Off:Latency                0
+   sys-L2Fetches:On:Latency                 0
+   sys-L2Other:Off:Latency                  0
+   sys-L2Other:On:Latency                   0
+   sys-L2Reads:Off:Latency                  0
+   sys-L2Reads:On:Latency                   0
+   sys-L2Upgrades:On:Latency                0
+   sys-L2Writes:Off:Latency                 0
+   sys-L2Writes:On:Latency                  0
+   sys-Packets                              0
+   sys-Packets:C2S                          0
+   sys-Packets:S2C                          0
+   sys-ServerTxData                         0
+   sys-cycles                               250000000
+   sys-memory-DMA:Read                      0
+   sys-memory-DMA:Write                     0
+   sys-memory-Evict:Clean                   0
+   sys-memory-Evict:Dirty                   0
+   sys-memory-Evict:Writable                0
+   sys-memory-NonAllocStore                 0
+   sys-memory-Reads                         1897
+   sys-memory-Upgrade                       0
+   sys-memory-Writes                        142

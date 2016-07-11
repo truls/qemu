@@ -346,9 +346,19 @@ static void tlb_add_large_page(CPUArchState *env, target_ulong vaddr,
  * Called from TCG-generated code, which is under an RCU read-side
  * critical section.
  */
+/*void tlb_set_page_with_attrs(CPUState *cpu, target_ulong vaddr,
+                             hwaddr paddr, MemTxAttrs attrs, int prot,
+                             int mmu_idx, target_ulong size)*/
+
+#if defined(CONFIG_FLEXUS) && defined(TARGET_SPARC64)                                                          // Flexus code here
+void tlb_set_page_with_attrs(CPUState *cpu, target_ulong vaddr,
+			     hwaddr paddr, MemTxAttrs attrs, int prot,
+                  int mmu_idx, target_ulong size, uint8_t cbits)
+#else
 void tlb_set_page_with_attrs(CPUState *cpu, target_ulong vaddr,
                              hwaddr paddr, MemTxAttrs attrs, int prot,
                              int mmu_idx, target_ulong size)
+#endif
 {
     CPUArchState *env = cpu->env_ptr;
     MemoryRegionSection *section;
@@ -391,6 +401,15 @@ void tlb_set_page_with_attrs(CPUState *cpu, target_ulong vaddr,
     index = (vaddr >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
     te = &env->tlb_table[mmu_idx][index];
 
+    /* Flexus code here */
+   #ifdef CONFIG_FLEXUS
+   /* Saving physical address along with the virtual address of a memory operation */
+    te->paddr = paddr;
+    #ifdef TARGET_SPARC64
+	te->dummy[0] = cbits;
+    #endif
+    #endif
+
     /* do not discard the translation in te, evict it into a victim tlb */
     env->tlb_v_table[mmu_idx][vidx] = *te;
     env->iotlb_v[mmu_idx][vidx] = env->iotlb[mmu_idx][index];
@@ -430,6 +449,25 @@ void tlb_set_page_with_attrs(CPUState *cpu, target_ulong vaddr,
 /* Add a new TLB entry, but without specifying the memory
  * transaction attributes to be used.
  */
+/*void tlb_set_page(CPUState *cpu, target_ulong vaddr,
+                  hwaddr paddr, int prot,
+                  int mmu_idx, target_ulong size)
+{
+    tlb_set_page_with_attrs(cpu, vaddr, paddr, MEMTXATTRS_UNSPECIFIED,
+                            prot, mmu_idx, size);
+}
+*/
+
+/* Flexus code here */
+#if defined(CONFIG_FLEXUS) && defined(TARGET_SPARC64)
+void tlb_set_page(CPUState *cpu, target_ulong vaddr,
+		  hwaddr paddr, int prot,
+                  int mmu_idx, target_ulong size, uint8_t cbits)
+{
+    tlb_set_page_with_attrs(cpu, vaddr, paddr, MEMTXATTRS_UNSPECIFIED,
+                            prot, mmu_idx, size, cbits);
+}
+#else
 void tlb_set_page(CPUState *cpu, target_ulong vaddr,
                   hwaddr paddr, int prot,
                   int mmu_idx, target_ulong size)
@@ -437,6 +475,7 @@ void tlb_set_page(CPUState *cpu, target_ulong vaddr,
     tlb_set_page_with_attrs(cpu, vaddr, paddr, MEMTXATTRS_UNSPECIFIED,
                             prot, mmu_idx, size);
 }
+#endif
 
 /* NOTE: this function can trigger an exception */
 /* NOTE2: the returned address is not exactly the physical address: it

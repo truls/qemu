@@ -3961,6 +3961,45 @@ contents of @code{iv.b64} to the second secret
 
 ETEXI
 
+#ifdef CONFIG_FLEXUS
+DEF("simpath", HAS_ARG, QEMU_OPTION_simpath, \
+	"-simpath <path>    specify the path to the simulator to load\n",
+	QEMU_ARCH_ALL)
+STEXI
+@item -simpath @var{path}
+@findex -simpath
+Specify the simulator to use"
+ETEXI
+
+DEF("timing", 0, QEMU_OPTION_timing, \
+	"-timing    use for timing simulation w/ Flexus\n",
+	QEMU_ARCH_ALL)
+STEXI
+@item -timing 
+@findex -timing
+use QEMU w/ Flexus for timing simulation\n"
+ETEXI
+
+DEF("startsimulation", 0, QEMU_OPTION_startsimulation, \
+	"-startsimulation    use that flag to start simulation at boot\n",
+	QEMU_ARCH_ALL)
+STEXI
+@item -startsimulation
+@findex -startsimulation
+use that flag to start simulation at boot\n"
+ETEXI
+
+DEF("simulatefor", HAS_ARG, QEMU_OPTION_simulatefor, \
+	"-simulatefor <num> specify the number of instructions to execute during the simulation before exiting.\n",
+	QEMU_ARCH_ALL)
+STEXI
+@item -simulatefor @var{num}
+@findex -simulatefor
+Specify the number of instructions to execute during the simulation, then exits. Must be used in conjunction with
+the @code{-startsimulation} option, or the simulation must be trigerred by magic instructions or another way.
+ETEXI
+#endif
+
 
 HXCOMM This is the last statement. Insert new options before this line!
 STEXI

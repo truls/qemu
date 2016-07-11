@@ -44,6 +44,15 @@
 #include "qapi-event.h"
 #include "hw/nmi.h"
 #include "sysemu/replay.h"
+#include "vl.h"
+
+/* Flexus part here********************************/
+
+#ifdef CONFIG_FLEXUS
+#include "libqemuflex/flexus_proxy.h"
+#endif
+
+/* Flexus part here********************************/
 
 #ifndef _WIN32
 #include "qemu/compatfd.h"
@@ -1024,6 +1033,7 @@ static void qemu_tcg_wait_io_event(CPUState *cpu)
     }
 }
 
+
 static void qemu_kvm_wait_io_event(CPUState *cpu)
 {
     while (cpu_thread_is_idle(cpu)) {
@@ -1147,6 +1157,16 @@ static void *qemu_tcg_cpu_thread_fn(void *arg)
 
     /* process any pending work */
     atomic_mb_set(&exit_request, 1);
+    
+/*Flexus code here *****************************************/
+    #ifdef CONFIG_FLEXUS
+   if (timing_mode) {    //if in timing simulation mode, pass control to flexus
+       printf("QEMU: Starting timing simulation. Passing control to Flexus.\n");
+       simulator_start();
+       return NULL;
+   }
+   #endif
+ /*Flexus code here *****************************************/
 
     while (1) {
         tcg_exec_all();
@@ -1724,3 +1744,44 @@ void dump_drift_info(FILE *f, fprintf_function cpu_fprintf)
         cpu_fprintf(f, "Max guest advance   NA\n");
     }
 }
+
+
+
+
+#ifdef CONFIG_FLEXUS
+//NOOSHIN: test begin
+int get_info(void *opaque){
+  CPUState* cpu = (CPUState*)opaque;
+
+  int r = 0;
+  printf("QEMU: in get_info\n");
+
+  /* Account partial waits to QEMU_CLOCK_VIRTUAL.  */
+    qemu_account_warp_timer();
+
+    qemu_clock_enable(QEMU_CLOCK_VIRTUAL,
+                          (cpu->singlestep_enabled & SSTEP_NOTIMER) == 0);
+
+    if (cpu_can_run(cpu)) {
+        r = tcg_cpu_exec(cpu);
+        if (r == EXCP_DEBUG) {
+            cpu_handle_guest_debug(cpu);
+           
+        }
+    } 
+    /* Pairs with smp_wmb in qemu_cpu_kick.  */
+    atomic_mb_set(&exit_request, 0);
+
+    if (use_icount) {
+        int64_t deadline = qemu_clock_deadline_ns_all(QEMU_CLOCK_VIRTUAL);
+
+        if (deadline == 0) {
+            qemu_clock_notify(QEMU_CLOCK_VIRTUAL);
+        }
+    }
+    qemu_tcg_wait_io_event(QTAILQ_FIRST(&cpus));
+}  
+//NOOSHIN: test end
+#endif
+
+

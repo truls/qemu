@@ -175,18 +175,36 @@ void tlb_flush_by_mmuidx(CPUState *cpu, ...);
  * single TARGET_PAGE_SIZE region is mapped; the supplied @size is only
  * used by tlb_flush_page.
  */
-void tlb_set_page_with_attrs(CPUState *cpu, target_ulong vaddr,
+/*void tlb_set_page_with_attrs(CPUState *cpu, target_ulong vaddr,
                              hwaddr paddr, MemTxAttrs attrs,
-                             int prot, int mmu_idx, target_ulong size);
+                             int prot, int mmu_idx, target_ulong size);  */
 /* tlb_set_page:
  *
  * This function is equivalent to calling tlb_set_page_with_attrs()
  * with an @attrs argument of MEMTXATTRS_UNSPECIFIED. It's provided
  * as a convenience for CPUs which don't use memory transaction attributes.
  */
+/*void tlb_set_page(CPUState *cpu, target_ulong vaddr,
+                  hwaddr paddr, int prot,
+                  int mmu_idx, target_ulong size);*/
+
+#if defined(CONFIG_FLEXUS) && defined(TARGET_SPARC64)
+void tlb_set_page(CPUState *cpu, target_ulong vaddr,
+                  hwaddr paddr, int prot,
+                  int mmu_idx, target_ulong size, uint8_t cbits);
+void tlb_set_page_with_attrs(CPUState *cpu, target_ulong vaddr,
+                             hwaddr paddr, MemTxAttrs attrs,
+			       int prot, int mmu_idx, target_ulong size, uint8_t cbits);
+#else
 void tlb_set_page(CPUState *cpu, target_ulong vaddr,
                   hwaddr paddr, int prot,
                   int mmu_idx, target_ulong size);
+void tlb_set_page_with_attrs(CPUState *cpu, target_ulong vaddr,
+                             hwaddr paddr, MemTxAttrs attrs,
+			       int prot, int mmu_idx, target_ulong size);
+#endif
+
+
 void tb_invalidate_phys_addr(AddressSpace *as, hwaddr addr);
 void probe_write(CPUArchState *env, target_ulong addr, int mmu_idx,
                  uintptr_t retaddr);

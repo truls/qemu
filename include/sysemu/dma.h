@@ -17,6 +17,12 @@
 #include "block/accounting.h"
 #include "sysemu/kvm.h"
 
+#ifdef CONFIG_FLEXUS
+#define QEMUFLEX_PROTOTYPES
+#define QEMUFLEX_QEMU_INTERNAL
+#include "libqemuflex/api.h"
+#endif // CONFIG_FLEXUS
+
 typedef struct ScatterGatherEntry ScatterGatherEntry;
 
 typedef enum {
@@ -87,6 +93,30 @@ static inline int dma_memory_rw_relaxed(AddressSpace *as, dma_addr_t addr,
                                         void *buf, dma_addr_t len,
                                         DMADirection dir)
 {
+   
+    #if defined(CONFIG_FLEXUS)
+  //FIXME need to build memory transaction here
+  memory_transaction_t* mem_trans = malloc(sizeof(memory_transaction_t));
+  mem_trans->s.physical_address = addr;
+  if(dir == DMA_DIRECTION_FROM_DEVICE){
+    mem_trans->s.type = QEMU_Trans_Store;
+  } else {
+    mem_trans->s.type = QEMU_Trans_Load;
+  }
+
+  mem_trans->s.size = len;
+
+  QEMU_callback_args_t * event_data = malloc(sizeof(QEMU_callback_args_t));
+  event_data->ncm = malloc(sizeof(QEMU_ncm));
+  event_data->ncm->space = NULL;
+  event_data->ncm->trans = mem_trans;
+
+  QEMU_execute_callbacks(QEMUFLEX_GENERIC_CALLBACK, QEMU_dma_mem_trans, event_data);
+  free(mem_trans);
+  free(event_data->ncm);
+  free(event_data);
+#endif
+
     return (bool)address_space_rw(as, addr, MEMTXATTRS_UNSPECIFIED,
                                   buf, len, dir == DMA_DIRECTION_FROM_DEVICE);
 }
@@ -134,6 +164,28 @@ static inline void *dma_memory_map(AddressSpace *as,
 {
     hwaddr xlen = *len;
     void *p;
+   
+   #ifdef CONFIG_FLEXUS
+  memory_transaction_t* mem_trans = malloc(sizeof(memory_transaction_t));
+  mem_trans->s.physical_address = addr;
+  if(dir == DMA_DIRECTION_FROM_DEVICE){
+    mem_trans->s.type = QEMU_Trans_Store;
+  } else {
+    mem_trans->s.type = QEMU_Trans_Load;
+  }
+
+  mem_trans->s.size = *len;
+
+  QEMU_callback_args_t * event_data = malloc(sizeof(QEMU_callback_args_t));
+  event_data->ncm = malloc(sizeof(QEMU_ncm));
+  event_data->ncm->space = NULL;
+  event_data->ncm->trans = mem_trans;
+
+  QEMU_execute_callbacks(QEMUFLEX_GENERIC_CALLBACK, QEMU_dma_mem_trans, event_data);
+  free(mem_trans);
+  free(event_data->ncm);
+  free(event_data);
+#endif
 
     p = address_space_map(as, addr, &xlen, dir == DMA_DIRECTION_FROM_DEVICE);
     *len = xlen;
