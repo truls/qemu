@@ -144,6 +144,30 @@ void qmp_cpu_add(int64_t id, Error **errp)
     }
 }
 
+void cpu_get_quantum(const char *val);
+void cpu_set_quantum(const char *val);
+void cpu_get_ic(const char *str);
+
+void qmp_cpu_get_quantum(const char *val, Error **errp)
+{
+    cpu_get_quantum(val);
+}
+void qmp_cpu_set_quantum(const char *val, Error **errp)
+{
+    cpu_set_quantum(val);
+}
+
+void qmp_cpu_get_ic(const char *str, Error **errp)
+{
+    cpu_get_ic(str);
+}
+void qmp_cpu_zero_all(Error **errp)
+{
+    cpu_zero_all();
+}
+
+
+
 #ifndef CONFIG_VNC
 /* If VNC support is enabled, the "true" query-vnc command is
    defined in the VNC subsystem */

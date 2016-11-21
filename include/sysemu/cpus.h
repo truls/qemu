@@ -14,6 +14,14 @@ void cpu_synchronize_all_post_init(void);
 
 void qtest_clock_warp(int64_t dest);
 
+
+void cpu_get_quantum(const char* val);
+void cpu_set_quantum(const char* str);
+void cpu_get_ic(const char *str);
+void cpu_zero_all(void);
+
+
+
 #ifndef CONFIG_USER_ONLY
 /* vl.c */
 extern int smp_cores;

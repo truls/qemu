@@ -345,6 +345,7 @@ typedef int (*QEMU_CPU_GET_SOCKET_ID_PROC)(conf_object_t *cpu);
 typedef int (*QEMU_CPU_GET_CORE_ID_PROC)(conf_object_t *cpu);
 typedef int (*QEMU_CPU_GET_THREAD_ID_PROC)(conf_object_t *cpu);
 typedef conf_object_t* (*QEMU_GET_ALL_PROCESSORS_PROC)(int *numCPUS);
+typedef void (*QEMU_CPU_SET_QUANTUM)(const int *val);
 typedef int (*QEMU_SET_TICK_FREQUENCY_PROC)(conf_object_t *cpu, double tick_freq);
 typedef double (*QEMU_GET_TICK_FREQUENCY_PROC)(conf_object_t *cpu);
 typedef uint64_t (*QEMU_GET_PROGRAM_COUNTER_PROC)(conf_object_t *cpu);
@@ -420,6 +421,8 @@ extern QEMU_CPU_GET_THREAD_ID_PROC QEMU_cpu_get_thread_id;
 // return an array of all processors
 // (numSockets * numCores * numthreads CPUs)
 extern QEMU_GET_ALL_PROCESSORS_PROC QEMU_get_all_processors;
+
+extern QEMU_CPU_SET_QUANTUM QEMU_cpu_set_quantum;
 
 // set the frequency of a given cpu.
 extern QEMU_SET_TICK_FREQUENCY_PROC QEMU_set_tick_frequency;
@@ -531,6 +534,8 @@ int QEMU_cpu_get_thread_id(conf_object_t *cpu);
 // return an array of all processors
 // (numSockets * numCores * numthreads CPUs)
 conf_object_t *QEMU_get_all_processors(int *numCPUs);
+
+void QEMU_cpu_set_quantum(const int * val);
 
 // set the frequency of a given cpu.
 int QEMU_set_tick_frequency(conf_object_t *cpu, double tick_freq);
@@ -796,6 +801,8 @@ QEMU_CPU_GET_THREAD_ID_PROC QEMU_cpu_get_thread_id;
 // return an array of all processors
 // (numSockets * numCores * numthreads CPUs)
 QEMU_GET_ALL_PROCESSORS_PROC QEMU_get_all_processors;
+
+QEMU_CPU_SET_QUANTUM QEMU_cpu_set_quantum;
 
 // set the frequency of a given cpu.
 QEMU_SET_TICK_FREQUENCY_PROC QEMU_set_tick_frequency;

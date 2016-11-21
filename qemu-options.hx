@@ -3260,6 +3260,15 @@ This allows for instance switching to monitor to commit changes to the
 disk image.
 ETEXI
 
+DEF("set_quantum", HAS_ARG, QEMU_OPTION_set_quantum, \
+    "-set_quantum <num> specify the number of instructions to execute per vcpu in each iteration.\n",
+    QEMU_ARCH_ALL)
+STEXI
+@item -set_quantum @var{num}
+@findex -set_quantum
+Specify the number of instructions to execute per vcpu in each iteration.
+ETEXI
+
 DEF("loadvm", HAS_ARG, QEMU_OPTION_loadvm, \
     "-loadvm [tag|id]\n" \
     "                start right away with a saved state (loadvm in monitor)\n",

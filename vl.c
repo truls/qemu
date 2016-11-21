@@ -43,6 +43,8 @@ extern int64_t flexus_simulation_length;
 #include <libvdeplug.h>
 #endif
 
+sig_atomic_t quantum_value;
+
 #ifdef CONFIG_SDL
 #if defined(__APPLE__) || defined(main)
 #include <SDL.h>
@@ -2985,6 +2987,7 @@ int main(int argc, char **argv, char **envp)
     int optind;
     const char *optarg;
     const char *loadvm = NULL;
+    const char *quantum_opt = NULL;
     MachineClass *machine_class;
     const char *cpu_model;
     const char *vga_model = NULL;
@@ -3639,6 +3642,11 @@ int main(int argc, char **argv, char **envp)
             case QEMU_OPTION_debugcon:
                 add_device_config(DEV_DEBUGCON, optarg);
                 break;
+
+            case QEMU_OPTION_set_quantum:
+                quantum_opt = optarg;
+                break;
+
             case QEMU_OPTION_loadvm:
                 loadvm = optarg;
                 break;
@@ -4671,6 +4679,13 @@ int main(int argc, char **argv, char **envp)
             autostart = 0;
         }
     }
+    if (quantum_opt) {
+        quantum_value = atoi(quantum_opt);
+        if (quantum_value < 0)
+            quantum_value = 0;
+    }
+    else
+        quantum_value = 0;
 
     qdev_prop_check_globals();
     if (vmstate_dump_file) {

@@ -36,6 +36,8 @@
 
 #include "trace-tcg.h"
 
+extern sig_atomic_t quantum_value;
+
 #ifdef CONFIG_FLEXUS
 #define QEMUFLEX_PROTOTYPES
 #define QEMUFLEX_QEMU_INTERNAL
@@ -11276,6 +11278,19 @@ void gen_intermediate_code_a64(ARMCPU *cpu, TranslationBlock *tb)
         tcg_gen_insn_start(dc->pc, 0);
         num_insns++;
 
+        cs->nr_instr++;
+        cs->nr_total_instr++;
+
+        // we set the quantum here
+        if(quantum_value != 0){
+
+            if(cs->nr_instr >= quantum_value){
+                cs->hasReachedInstrLimit = true;
+            }
+        }
+
+
+
         if (unlikely(!QTAILQ_EMPTY(&cs->breakpoints))) {
             CPUBreakpoint *bp;
             QTAILQ_FOREACH(bp, &cs->breakpoints, entry) {
@@ -11353,7 +11368,8 @@ void gen_intermediate_code_a64(ARMCPU *cpu, TranslationBlock *tb)
              !singlestep &&
              !dc->ss_active &&
              dc->pc < next_page_start &&
-             num_insns < max_insns);
+             num_insns < max_insns &&
+             ! cs->hasReachedInstrLimit);
 
     if (tb->cflags & CF_LAST_IO) {
         gen_io_end();

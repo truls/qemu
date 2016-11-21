@@ -1130,9 +1130,8 @@ static void *qemu_dummy_cpu_thread_fn(void *arg)
 static void tcg_exec_all(void);
 
 static void *qemu_tcg_cpu_thread_fn(void *arg)
-{
+{    
     CPUState *cpu = arg;
-
     rcu_register_thread();
 
     qemu_mutex_lock_iothread();
@@ -1142,6 +1141,17 @@ static void *qemu_tcg_cpu_thread_fn(void *arg)
         cpu->thread_id = qemu_get_thread_id();
         cpu->created = true;
         cpu->can_do_io = 1;
+        cpu->nr_instr = 0;
+        cpu->hasReachedInstrLimit = false;
+        cpu->nr_total_instr = 0;
+        cpu->nr_quantumHits = 0;
+        cpu->nr_exp[0] = 0;
+        cpu->nr_exp[1] = 0;
+        cpu->nr_exp[2] = 0;
+        cpu->nr_exp[3] = 0;
+        cpu->nr_exp[4] = 0;
+
+
     }
     qemu_cond_signal(&qemu_cpu_cond);
 
@@ -1405,6 +1415,7 @@ void qemu_init_vcpu(CPUState *cpu)
     cpu->nr_threads = smp_threads;
     cpu->stopped = true;
 
+
     if (!cpu->as) {
         /* If the target cpu hasn't set up any address spaces itself,
          * give it the default one.
@@ -1425,7 +1436,7 @@ void qemu_init_vcpu(CPUState *cpu)
 }
 
 void cpu_stop_current(void)
-{
+{    
     if (current_cpu) {
         current_cpu->stop = false;
         current_cpu->stopped = true;
@@ -1528,6 +1539,8 @@ static int tcg_cpu_exec(CPUState *cpu)
     return ret;
 }
 
+
+
 static void tcg_exec_all(void)
 {
     int r;
@@ -1538,7 +1551,7 @@ static void tcg_exec_all(void)
     if (next_cpu == NULL) {
         next_cpu = first_cpu;
     }
-    for (; next_cpu != NULL && !exit_request; next_cpu = CPU_NEXT(next_cpu)) {
+    for (; next_cpu != NULL && !exit_request; ) {
         CPUState *cpu = next_cpu;
 
         qemu_clock_enable(QEMU_CLOCK_VIRTUAL,
@@ -1549,10 +1562,29 @@ static void tcg_exec_all(void)
             if (r == EXCP_DEBUG) {
                 cpu_handle_guest_debug(cpu);
                 break;
+            }            
+            else if (r == EXCP_INTERRUPT || r == EXCP_HLT || r == EXCP_HALTED || r == EXCP_YIELD)
+            {
+                 next_cpu->hasReachedInstrLimit = true;
             }
+
+            cpu->nr_exp[r-EXCP_INTERRUPT]++;
+
         } else if (cpu->stop || cpu->stopped) {
             break;
         }
+
+
+        /*everytime we are looping through our vCPUs
+        we will limit the insructions that are executed by that specific CPU
+        to a number that is defined as an program argument. this limit prevents
+        further instruction to get generated in the Translation file of the relative guest Architecture.*/
+        if (next_cpu->hasReachedInstrLimit){
+            next_cpu->hasReachedInstrLimit = false;
+            next_cpu->nr_instr = 0;
+            next_cpu = CPU_NEXT(next_cpu);
+
+            }
     }
 
     /* Pairs with smp_wmb in qemu_cpu_kick.  */
@@ -1745,8 +1777,65 @@ void dump_drift_info(FILE *f, fprintf_function cpu_fprintf)
     }
 }
 
+extern sig_atomic_t quantum_value;
+
+void cpu_get_quantum(const char* val)
+{
+    char * tmp = malloc (128);
+    sprintf(tmp, "%d", quantum_value);
+    strcpy(val , tmp);
+}
+
+void cpu_set_quantum(const char* val)
+{
+   quantum_value = atoi(val);
+}
+
+void cpu_get_ic(const char *str)
+{
+    CPUState *cpu;
+    int length = 0;
+    char * tmp = malloc (1024);
+    CPU_FOREACH(cpu)
+    {
+        length += sprintf(tmp+ length, "CPU %d has executed %d instructions so far.\n", cpu->cpu_index, cpu->nr_total_instr);
+    }
+
+    length += sprintf(tmp+ length, "\nDetails:\nCPU\tQUANTUM-HITS\tIRQs\tEXP-DEBUGs\tHLTs\tSTOPs\tYIELDs\n");
+
+    CPU_FOREACH(cpu)
+    {
+
+        length += sprintf(tmp+ length, "%d\t%d\t\t%d\t%d\t\t%d\t%d\t%d\n",
+                                                                     cpu->cpu_index,
+                                                                     cpu->nr_quantumHits,
+                                                                     cpu->nr_exp[0],
+                                                                     cpu->nr_exp[1],
+                                                                     cpu->nr_exp[2],
+                                                                     cpu->nr_exp[3],
+                                                                     cpu->nr_exp[4]);
+
+    }
+
+    strcpy(str, tmp);
+}
 
 
+void cpu_zero_all(void)
+{
+    CPUState *cpu;
+    CPU_FOREACH(cpu)
+    {
+        cpu->nr_quantumHits = 0;
+        cpu->nr_total_instr = 0;
+        cpu->nr_exp[0] = 0;
+        cpu->nr_exp[1] = 0;
+        cpu->nr_exp[2] = 0;
+        cpu->nr_exp[3] = 0;
+        cpu->nr_exp[4] = 0;
+    }
+
+}
 
 #ifdef CONFIG_FLEXUS
 //NOOSHIN: test begin
@@ -1780,7 +1869,7 @@ int get_info(void *opaque){
         }
     }
     qemu_tcg_wait_io_event(QTAILQ_FIRST(&cpus));
-}  
+}
 //NOOSHIN: test end
 #endif
 

@@ -393,6 +393,10 @@ int cpu_exec(CPUState *cpu)
 
     /* prepare setjmp context for exception handling */
     for(;;) {
+        if(cpu->hasReachedInstrLimit){
+            cpu->nr_quantumHits++;
+            break;
+        }
         if (sigsetjmp(cpu->jmp_env, 0) == 0) {
             /* if an exception is pending, we execute it here */
             if (cpu->exception_index >= 0) {
@@ -436,6 +440,9 @@ int cpu_exec(CPUState *cpu)
 
             next_tb = 0; /* force lookup of first TB */
             for(;;) {
+                if(cpu->hasReachedInstrLimit){
+                    break;
+                }
                 interrupt_request = cpu->interrupt_request;
                 if (unlikely(interrupt_request)) {
                     if (unlikely(cpu->singlestep_enabled & SSTEP_NOIRQ)) {

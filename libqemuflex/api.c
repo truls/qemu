@@ -32,6 +32,8 @@ extern "C" {
 #endif
 
 extern int smp_cpus;
+extern sig_atomic_t quantum_value;
+
 
 //Functions I am not sure on(wasn't the last person to work on them)
 //The callback functions
@@ -748,7 +750,11 @@ void QEMU_execute_callbacks(
       do_execute_callback(curr, event, event_data);
   }
 }
-
+void QEMU_cpu_set_quantum(const int * val)
+{
+    if (*val > 0)
+        quantum_value = *val;
+}
 #endif /* CONFIG_FLEXUS */
 
 #ifdef __cplusplus

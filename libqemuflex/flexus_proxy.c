@@ -31,6 +31,9 @@ void QFLEX_API_get_interface_hooks(QFLEX_API_Interface_Hooks_t* hooks) {
   hooks->QEMU_cpu_get_core_id= QEMU_cpu_get_core_id;
   hooks->QEMU_cpu_get_thread_id= QEMU_cpu_get_thread_id;
   hooks->QEMU_get_all_processors= QEMU_get_all_processors;
+
+  hooks->QEMU_cpu_set_quantum= QEMU_cpu_set_quantum;
+
   hooks->QEMU_set_tick_frequency= QEMU_set_tick_frequency;
   hooks->QEMU_get_tick_frequency= QEMU_get_tick_frequency;
   hooks->QEMU_get_program_counter= QEMU_get_program_counter;

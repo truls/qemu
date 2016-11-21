@@ -275,6 +275,12 @@ struct CPUState {
     int nr_threads;
     int numa_node;
 
+    int nr_instr;
+    int nr_total_instr; /*shows how many instructions this CPU has executed so far*/
+    bool hasReachedInstrLimit;
+    int nr_exp[5];
+    int nr_quantumHits;
+
     struct QemuThread *thread;
 #ifdef _WIN32
     HANDLE hThread;
