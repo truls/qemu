@@ -79,6 +79,7 @@
 #include "sysemu/block-backend.h"
 #include "sysemu/qtest.h"
 #include "qemu/cutils.h"
+#include "string.h"
 
 /* for hmp_info_irq/pic */
 #if defined(TARGET_SPARC)
@@ -1752,16 +1753,11 @@ void qmp_closefd(const char *fdname, Error **errp)
     error_setg(errp, QERR_FD_NOT_FOUND, fdname);
 }
 
-static void hmp_loadvm(Monitor *mon, const QDict *qdict)
+static void hmp_loadvm(Monitor *mon, const QDict *qdict) //inc snapshots support
 {
-    int saved_vm_running  = runstate_is_running();
     const char *name = qdict_get_str(qdict, "name");
-
-    vm_stop(RUN_STATE_RESTORE_VM);
-
-    if (load_vmstate(name) == 0 && saved_vm_running) {
-        vm_start();
-    }
+    if(incremental_load_vmstate(name) < 0)
+	monitor_printf(mon, "Error: can't load the snapshot with args: %s\n", name);
 }
 
 int monitor_get_fd(Monitor *mon, const char *fdname, Error **errp)

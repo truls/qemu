@@ -43,6 +43,7 @@
 #include "qemu/queue.h"
 #include "sysemu/cpus.h"
 #include "exec/memory.h"
+#include "exec/ram_addr.h"
 #include "qmp-commands.h"
 #include "trace.h"
 #include "qemu/bitops.h"
@@ -50,6 +51,9 @@
 #include "block/snapshot.h"
 #include "block/qapi.h"
 #include "qemu/cutils.h"
+#include "hw/loader.h"
+#include "qapi/qmp/qstring.h"
+#include <ctype.h>
 
 #ifndef ETH_P_RARP
 #define ETH_P_RARP 0x8035
@@ -59,8 +63,24 @@
 #define ARP_OP_REQUEST_REV 0x3
 
 const unsigned int postcopy_ram_discard_version = 0;
+int flag_save=0;//inc snapshots support
+QList *dep_list; //inc snapshots support
 
 static bool skip_section_footers;
+
+static void iter_func(QObject *obj, void *opaque) { //inc snapshots support--iterator function that prints the contents of qlist into Dep_list.txt 
+    QString *qs;
+
+    g_assert(opaque != NULL);
+
+    qs = qobject_to_qstring(obj);
+    g_assert(qs != NULL);  
+
+    FILE *fp;
+    fp=fopen(opaque, "a+"); //path to chain of snapshots
+    fprintf(fp, "%s ", qs->string);
+    fclose(fp);
+}
 
 static struct mig_cmd_args {
     ssize_t     len; /* -1 = variable */
@@ -77,6 +97,157 @@ static struct mig_cmd_args {
     [MIG_CMD_PACKAGED]         = { .len =  4, .name = "PACKAGED" },
     [MIG_CMD_MAX]              = { .len = -1, .name = "MAX" },
 };
+
+static bool isNumber(const char * name){
+	int length, i;
+	length = strlen(name);
+	for(i = 0; i < length; i++)
+	{
+   	 	if (!isdigit(name[i]))
+			return false;
+	}
+	return true;
+}
+
+//Check if provided name is id
+//then try to find string analogue
+static bool get_snapshot_name_by_id(char* name, char *filename){
+	size_t len = 0;
+	char *line, *line2;
+	char *pch;
+	FILE *fp;
+	bool ret = false;
+	fp = fopen(filename, "a+"); //path to chain to snapshots
+    	if(fp == NULL){
+		fprintf(stdout, "Error: can't open file %s\n", filename);
+		return -1;
+   	}
+	while(1){
+		if(getline(&line, &len, fp) < 0)
+			break;
+        	line2 = (char *)malloc(len*sizeof(char));
+        	strcpy(line2,line);
+
+       	 	if (feof(fp)) break;
+	
+		pch = strtok(line2, " \n");//get id from first place in line
+		if (strcmp(pch, name) == 0){//if find line with requirement id
+			pch = strtok(NULL, " :\n");// then get name links with id
+			strcpy(name, pch);
+			ret = true;
+			free(line2);
+    			break;
+		}
+		free(line2);
+	
+	}
+	fclose(fp);
+	return ret;
+}
+
+//Check if there are some dependencies
+//if there are no any then can delete
+static bool check_snapshot_dependencies(char* name, char *filename){
+    bool ret = false;
+    char *line, *line2;
+    char *pch;
+    size_t len = 0;
+    int count = 0; //number of times the name of snapshot appears in file. If the snapshots exists with no children the count will be 2.
+    FILE *fp;
+
+    fp = fopen(filename, "a+"); //path to chain to snapshots
+ 
+    while(1){
+	if (count > 2){
+		ret = true;
+ 		break;
+	}
+	if(getline(&line, &len, fp) < 0){
+		break;
+        }
+        line2 = (char *)malloc(len*sizeof(char));
+        strcpy(line2,line);
+
+        if (feof(fp)) break;
+
+	pch = strtok(line, " ");//get id, but skip it
+	pch = strtok(NULL, " :\n");//get name
+
+        while (pch != NULL){
+		if (strcmp(pch,name) == 0){
+ 			count++;
+ 		}
+		pch = strtok(NULL, " ,.-:\n");
+	}
+    	free(line2);
+    }
+    fclose(fp);
+    return ret;
+}
+
+static int delete_chain(char* name, char *filename, char *force) { //inc snapshots support--deletes all snapshot chains containing the called snapshot. Return number of deleted snapshots in success and -1 in fail.
+    BlockDriverState *bs;
+    Error *err;
+    FILE *fp, *fp2;
+    size_t len = 0;
+    char *line, *line2;
+    char *pch;
+    int del = 0;
+
+    if ((strcmp(force, "FORCE") != 0) && (check_snapshot_dependencies(name, filename) == true)){
++	fprintf(stdout, "Info: snapshot \"%s\" has dependent snapshots!\nIf you want to delete or save it anyway, please provide flag in format: \"snapshot_name FORCE\" (quotes included)\n",name);
+	return -1;
+    }else{
+    	fp = fopen(filename, "a+"); //path to chain to snapshots
+        fp2 = fopen("Dep_list2.txt", "a+");//path to chain to snapshots
+        if(fp == NULL || fp2 == NULL){
+		fprintf(stdout, "Error: can't open file \"%s\" or supporting file\n", filename);
+		return -1;
+    	}
+
+    	while (1) { 
+        	del=0;
+        	if(getline(&line, &len, fp) < 0)
+			break;
+        	line2 = (char *)malloc(len*sizeof(char));
+        	strcpy(line2,line);
+
+        	if (feof(fp)) break;
+        
+		pch = strtok(line, " ");//get id, but skip it
+		pch = strtok(NULL, " :\n");//get name
+        	while (pch != NULL){
+            		if (strcmp(pch,name) == 0){
+				del=1;//if line contains snapshot name, delete it
+				break;	
+	    		}
+            		pch = strtok(NULL, " ,.-:\n");
+        	}  
+        	if (del ==0) {//if there is no snapshot name in this line
+            		fputs(line2,fp2);
+        	} else {
+            		pch = strtok(line2," \n");//get id, but skip it
+            		pch = strtok(NULL," :\n");//get name
+            		if (bdrv_all_delete_snapshot(pch, &bs, &err) < 0) {
+                		error_reportf_err(err,
+                          		"Error while deleting snapshot on device '%s': ",
+                          		bdrv_get_device_name(bs));
+    				fclose(fp);
+    				fclose(fp2);
+    				free(line2);
+    				remove("Dep_list2.txt");//path to chain to snapshots
+				return -1;
+            		}
+        	}
+    		free(line2);
+    	}
+    	fclose(fp);
+    	fclose(fp2);
+    	remove(filename);//path to chain to snapshots
+    	rename("Dep_list2.txt", filename);//path to chain to snapshots
+    }
+    return 0;
+}
 
 static int announce_self_create(uint8_t *buf,
                                 uint8_t *mac_addr)
@@ -320,6 +491,48 @@ static const VMStateDescription vmstate_configuration = {
 static void dump_vmstate_vmsd(FILE *out_file,
                               const VMStateDescription *vmsd, int indent,
                               bool is_subsection);
+
+static int parse_snapshot_args(const char *name, char **args){
+    //Parsing snapshot arguments
+    //1: snapname(string)
+    //2: filename(string or NULL)
+    //3: force flag(FORCE or NULL) not used for loading
+    memset(args[0], 0, sizeof(args[0]));
+    memset(args[1], 0, sizeof(args[1]));
+    memset(args[2], 0, sizeof(args[2]));
+    char *line;
+    line = (char *)malloc(strlen(name)*sizeof(char));
+    strcpy(line, name);
+    char *tmp = strtok(line, " \n");
+    strcpy(args[0],tmp);
+    tmp = strtok(NULL, " \n");
+    while(tmp != NULL){
+	if (args[0] != NULL){
+		if(strcmp(tmp, "FORCE") == 0){
+			strcpy(args[2], "FORCE");
+		}
+		else{
+			strcpy(args[1], tmp);
+			fprintf(stdout, "Info: %s file name will be used!\n", args[1]);
+		}
+	}
+	else {
+		fprintf(stdout, "Error: first argument of loadvm must be snapshot name!\n");
+    		free(line);
+		return -1;
+	}
+        tmp = strtok(NULL, " \n");
+    }
+    
+    //Check if filename wasn't provided
+    //then set up default name
+    if (strlen(args[1]) == 0){
+	fprintf(stdout, "Info: default file name in current directory will be used: default_depend_list.txt\n");
+	strcpy(args[1],"default_depend_list.txt");
+    }
+    free(line);
+    return 0;
+}
 
 static void dump_vmstate_vmsf(FILE *out_file, const VMStateField *field,
                               int indent)
@@ -1964,30 +2177,56 @@ int qemu_loadvm_state(QEMUFile *f)
 
 void hmp_savevm(Monitor *mon, const QDict *qdict)
 {
-    BlockDriverState *bs, *bs1;
+    BlockDriverState *bs;
     QEMUSnapshotInfo sn1, *sn = &sn1, old_sn1, *old_sn = &old_sn1;
     int ret;
+    int k;
     QEMUFile *f;
     int saved_vm_running;
     uint64_t vm_state_size;
     qemu_timeval tv;
     struct tm tm;
-    const char *name = qdict_get_try_str(qdict, "name");
+    const char *name = qdict_get_try_str(qdict, "name");//variable "name" may contains special arguments 
+    char **args;
+    args = (char **)malloc(3*sizeof(char *));
+    args[0] = (char *)malloc(256*sizeof(char));	//for snapname
+    args[1] = (char *)malloc(256*sizeof(char));	//for filename
+    args[2] = (char *)malloc(6*sizeof(char)); //for force flag
+
+    if ((parse_snapshot_args(name, args)) < 0){
+	return;
+    }
+
+    if(isNumber(args[0])){
+	fprintf(stdout, "Error: Please don't save snapshot with numeric name\n");
+	for (k = 0; k < 3; k++)
+		free(args[k]);
+    	free(args);    
+        return;	
+    }
+
     Error *local_err = NULL;
     AioContext *aio_context;
 
     if (!bdrv_all_can_snapshot(&bs)) {
         monitor_printf(mon, "Device '%s' is writable but does not "
                        "support snapshots.\n", bdrv_get_device_name(bs));
+    	for (k = 0; k < 3; k++)
+		free(args[k]);
+    	free(args);    
         return;
     }
 
-    /* Delete old snapshots of the same name */
-    if (name && bdrv_all_delete_snapshot(name, &bs1, &local_err) < 0) {
-        error_reportf_err(local_err,
-                          "Error while deleting snapshot on device '%s': ",
-                          bdrv_get_device_name(bs1));
-        return;
+    /* Delete old snapshots of the same name 
+    * (will be deleted only if FORCE flag was provided 
+    * or if old snapshot has no dependencies)*/
+    if (strlen(args[0]) != 0){
+	if(delete_chain(args[0], args[1], args[2]) < 0){//inc snapshots support 
+    		for (k = 0; k < 3; k++)
+			free(args[k]);
+    		free(args);    
+		return;
+	}
     }
 
     bs = bdrv_all_find_vmstate_bs();
@@ -2016,13 +2255,13 @@ void hmp_savevm(Monitor *mon, const QDict *qdict)
     sn->date_nsec = tv.tv_usec * 1000;
     sn->vm_clock_nsec = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
 
-    if (name) {
-        ret = bdrv_snapshot_find(bs, old_sn, name);
+    if (strlen(args[0]) != 0) {
+        ret = bdrv_snapshot_find(bs, old_sn, args[0]);
         if (ret >= 0) {
             pstrcpy(sn->name, sizeof(sn->name), old_sn->name);
             pstrcpy(sn->id_str, sizeof(sn->id_str), old_sn->id_str);
         } else {
-            pstrcpy(sn->name, sizeof(sn->name), name);
+            pstrcpy(sn->name, sizeof(sn->name), args[0]);
         }
     } else {
         /* cast below needed for OpenBSD where tv_sec is still 'long' */
@@ -2031,6 +2270,12 @@ void hmp_savevm(Monitor *mon, const QDict *qdict)
     }
 
     /* save the VM state */
+
+    if (flag_save == 0){ 
+        flag_save = 1;
+        dep_list = qlist_new();//this list is a global linked list which contains the snapshots our current system depends on 
+    }// inc snapshots support, if the list of snapshots is not yet created, create it
+  
     f = qemu_fopen_bdrv(bs, 1);
     if (!f) {
         monitor_printf(mon, "Could not open VM state file\n");
@@ -2049,8 +2294,28 @@ void hmp_savevm(Monitor *mon, const QDict *qdict)
         monitor_printf(mon, "Error while creating snapshot on '%s'\n",
                        bdrv_get_device_name(bs));
     }
+    //if saving stage was completed successful 
+    //and creating snapshot was successful 
+    //then print dependency list into output user file
+
+    FILE *fp; 
+    void *opaque;
+    opaque = args[1];
+    fp=fopen(args[1], "a+"); //path to chain of snapshots
+    fprintf(fp, "%s %s :    ", sn->id_str, args[0]); //name of snapshot we are saving 
+    fclose(fp);
+    qlist_append_obj(dep_list, QOBJECT(qstring_from_str(args[0])));//add new snapshot to the tail of the chain of snapshots
+    qlist_iter(dep_list, iter_func, opaque); //print full chain into text file
+    fp=fopen(args[1], "a+"); 
+    fprintf(fp, "\n"); 
+    fclose(fp); 
+
+
 
  the_end:
+    for (k = 0; k < 3; k++)
+	free(args[k]);
+    free(args);    
     aio_context_release(aio_context);
     if (saved_vm_running) {
         vm_start();
@@ -2083,14 +2348,113 @@ void qmp_xen_save_devices_state(const char *filename, Error **errp)
         vm_start();
     }
 }
+int incremental_load_vmstate(const char *name){
+    char **args;
+    int k;
+    bool isNumber_flag = false;
+    bool ret = false;
+    args = (char **)malloc(3*sizeof(char *));
+    args[0] = (char *)malloc(256*sizeof(char));	//for snapname
+    args[1] = (char *)malloc(256*sizeof(char));	//for filename
+    args[2] = (char *)malloc(6*sizeof(char)); //for force flag
 
-int load_vmstate(const char *name)
+    if (parse_snapshot_args(name, args) < 0){
+	return -1;
+    }
+
+    //if snapshot has numeric name 
+    //find for string analogue
+    isNumber_flag = isNumber(args[0]);
+    if (isNumber_flag == true){
+	ret = get_snapshot_name_by_id(args[0], args[1]);
+    	if(ret == false){
+		fprintf(stdout, "Error: There is no snapshot with id %s", args[0]);
+		for (k = 0; k < 3; k++)
+			free(args[k]);
+    		free(args);
+		return -1;
+	}
+    }
+	
+    int saved_vm_running  = runstate_is_running();
+    FILE *fp; //NORA from here
+    char *line = NULL;
+    char *pch;
+    size_t len;
+    bool find = false;
+    fp = fopen(args[1], "a+");
+    if (fp == NULL){
+	fprintf(stdout, "Can't open file for load snapshot\n");
+    	for (k = 0; k < 3; k++)
+		free(args[k]);
+    	free(args);
+	return -1;
+    }
+    vm_stop(RUN_STATE_RESTORE_VM);
+    while (1) {
+        if (feof(fp)) break;
+        if (getline(&line, &len, fp) < 0){
+		break;
+	} 
+
+	pch = strtok(line," ,.->:\n");//get id, but skip it
+        pch = strtok(NULL," ,.->:\n");//get name, use it
+        if (strcmp(pch, args[0]) == 0){
+	    find = true;
+            int flag = 0;
+            while (pch != NULL){
+                if (flag != 0){
+                    if(flag == 1){
+                        load_vmstate(pch,1); 
+                    } else {
+                        vm_start();
+                        vm_stop(RUN_STATE_RESTORE_VM);
+                        load_vmstate(pch,0);
+                    }
+	        }
+                pch = strtok(NULL, " ,.->:\n");
+                flag++;
+            }
+	    break;
+        }
+    }
+    fclose(fp);
+    if (!find){
+    	fprintf(stdout, "Error: can't find snaphot %s in file %s\n", args[0], args[1]);
+    	for (k = 0; k < 3; k++)
+		free(args[k]);
+    	free(args);
+	return -1;
+    }
+    for (k = 0; k < 3; k++)
+	free(args[k]);
+    free(args);
+    if(saved_vm_running) {vm_start();}
+    return 0;
+
+}
+int load_vmstate(const char *name, const int id)
 {
     BlockDriverState *bs, *bs_vm_state;
     QEMUSnapshotInfo sn;
     QEMUFile *f;
     int ret;
     AioContext *aio_context;
+    
+    if (flag_save==0){ //if the chain of snapshots is not yet created, create it.
+        flag_save=1;
+        dep_list = qlist_new();
+        memory_global_dirty_log_start();
+    }
+    
+    if (id == 1){ 
+        qemu_system_reset(VMRESET_SILENT);
+        while (qlist_pop(dep_list)!=NULL) {}; //clear the global linked list of snapshots--only done when we load the base snapshot
+    }else {
+        qemu_cache_reset();
+    }
+
+    
 
     if (!bdrv_all_can_snapshot(&bs)) {
         error_report("Device '%s' is writable but does not support snapshots.",
@@ -2140,11 +2504,13 @@ int load_vmstate(const char *name)
         return -EINVAL;
     }
 
-    qemu_system_reset(VMRESET_SILENT);
+    //Clean cache memory before loading
+    qemu_cache_reset();
     migration_incoming_state_new(f);
 
     aio_context_acquire(aio_context);
     ret = qemu_loadvm_state(f);
+    qlist_append_obj(dep_list, QOBJECT(qstring_from_str(name))); //add newly loaded snapshot to the local chain of snapshots 
     qemu_fclose(f);
     aio_context_release(aio_context);
 
@@ -2159,15 +2525,35 @@ int load_vmstate(const char *name)
 
 void hmp_delvm(Monitor *mon, const QDict *qdict)
 {
-    BlockDriverState *bs;
-    Error *err;
     const char *name = qdict_get_str(qdict, "name");
+    char **args;
+    int k;
+    bool ret = false;
+    bool isNumber_flag = false;
+    args = (char **)malloc(3*sizeof(char *));
+    args[0] = (char *)malloc(256*sizeof(char));	//for snapname
+    args[1] = (char *)malloc(256*sizeof(char));	//for filename
+    args[2] = (char *)malloc(6*sizeof(char)); //for force flag
 
-    if (bdrv_all_delete_snapshot(name, &bs, &err) < 0) {
-        error_reportf_err(err,
-                          "Error while deleting snapshot on device '%s': ",
-                          bdrv_get_device_name(bs));
+    if (parse_snapshot_args(name, args) < 0){
+	return;
     }
+	
+    isNumber_flag = isNumber(args[0]);
+
+    if (isNumber_flag == true){
+	ret = get_snapshot_name_by_id(args[0], args[1]);
+    	if(ret == false){
+		fprintf(stdout, "Error: There is no snapshot with id %s", args[0]);
+	}
+    }
+
+    if((isNumber_flag == false) || (ret == true))
+	delete_chain(args[0], args[1], args[2]);//inc snapshots support
+
+    for (k = 0; k < 3; k++)
+	free(args[k]);
+    free(args);
 }
 
 void hmp_info_snapshots(Monitor *mon, const QDict *qdict)

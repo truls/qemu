@@ -987,7 +987,20 @@ int rom_add_option(const char *file, int32_t bootindex)
     return rom_add_file(file, "genroms", 0, bootindex, true, NULL);
 }
 
-static void rom_reset(void *unused)
+/*
+ * Clean cache memory which may contain not up-to-date
+ * datas, but it doensn't touch any others 
+ * part of memory.
+ */
+void rom_cache_reset(void){
+    Rom *rom;
+
+    QTAILQ_FOREACH(rom, &roms, next) {
+	cpu_flush_icache_range(rom->addr, rom->datasize);
+    }
+}
+
+void rom_reset(void *unused)
 {
     Rom *rom;
 

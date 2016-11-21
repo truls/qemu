@@ -1750,6 +1750,26 @@ void qemu_devices_reset(void)
         re->func(re->opaque);
     }
 }
+/*
+ * The difference from qemu_system_reseti() is
+ * that for devices, containing their data in rom, 
+ * we clean only cahche memory, 
+ * but don't touch data themselfs 
+ * if it wasn't changed after last savevm.
+ */
+void qemu_cache_reset(void){
+	QEMUResetEntry *re, *nre;
+	cpu_synchronize_all_states();
+
+    	/* reset all devices */
+    	QTAILQ_FOREACH_SAFE(re, &reset_handlers, entry, nre) {
+        if (re->func == rom_reset)
+		rom_cache_reset();
+	else
+        	 re->func(re->opaque);
+   	 }
+	cpu_synchronize_all_post_reset();
+}
 
 void qemu_system_reset(bool report)
 {
@@ -4674,10 +4694,11 @@ int main(int argc, char **argv, char **envp)
     replay_checkpoint(CHECKPOINT_RESET);
     qemu_system_reset(VMRESET_SILENT);
     register_global_state();
-    if (loadvm) {
-        if (load_vmstate(loadvm) < 0) {
-            autostart = 0;
-        }
+    if (loadvm) { //inc snapshots support--for booting from snapshot
+ 	if(incremental_load_vmstate(loadvm) < 0){
+            fprintf(stdout, "Snapshot with args: %s, can not be loaded\n", loadvm);
+            exit(1);
+	}	
     }
     if (quantum_opt) {
         quantum_value = atoi(quantum_opt);

@@ -125,6 +125,9 @@ void stq_phys(AddressSpace *as, hwaddr addr, uint64_t val);
 
 void cpu_physical_memory_write_rom(AddressSpace *as, hwaddr addr,
                                    const uint8_t *buf, int len);
+void cpu_physical_memory_set_rom_dirty(AddressSpace *as, hwaddr addr,
+                                   const uint8_t *buf, int len);//inc snapshots support
+
 void cpu_flush_icache_range(hwaddr start, int len);
 
 extern struct MemoryRegion io_mem_rom;

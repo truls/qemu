@@ -2781,6 +2781,7 @@ void cpu_physical_memory_rw(hwaddr addr, uint8_t *buf,
 enum write_rom_type {
     WRITE_DATA,
     FLUSH_CACHE,
+    SET_DIRTY, //inc snapshots support
 };
 
 static inline void cpu_physical_memory_write_rom_internal(AddressSpace *as,
@@ -2811,6 +2812,8 @@ static inline void cpu_physical_memory_write_rom_internal(AddressSpace *as,
             case FLUSH_CACHE:
                 flush_icache_range((uintptr_t)ptr, (uintptr_t)ptr + l);
                 break;
+            case SET_DIRTY: //inc snapshots support--used to set certain sections of the ram (read only regions related to devices) as dirty. This ensures they are saved in every snapshot.  
+                cpu_physical_memory_set_dirty_range(addr1,l,4);
             }
         }
         len -= l;
@@ -2826,6 +2829,13 @@ void cpu_physical_memory_write_rom(AddressSpace *as, hwaddr addr,
 {
     cpu_physical_memory_write_rom_internal(as, addr, buf, len, WRITE_DATA);
 }
+
+void cpu_physical_memory_set_rom_dirty(AddressSpace *as, hwaddr addr,
+                                   const uint8_t *buf, int len)//inc snapshots support
+{
+    cpu_physical_memory_write_rom_internal(as, addr, buf, len, SET_DIRTY);
+}
+
 
 void cpu_flush_icache_range(hwaddr start, int len)
 {

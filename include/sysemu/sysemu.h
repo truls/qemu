@@ -67,6 +67,7 @@ int qemu_shutdown_requested_get(void);
 int qemu_reset_requested_get(void);
 void qemu_system_killed(int signal, pid_t pid);
 void qemu_devices_reset(void);
+void qemu_cache_reset(void);//inc snapshots support
 void qemu_system_reset(bool report);
 void qemu_system_guest_panicked(void);
 size_t qemu_target_page_bits(void);
@@ -77,7 +78,8 @@ void qemu_remove_exit_notifier(Notifier *notify);
 void qemu_add_machine_init_done_notifier(Notifier *notify);
 
 void hmp_savevm(Monitor *mon, const QDict *qdict);
-int load_vmstate(const char *name);
+int load_vmstate(const char *name, const int id);//inc snapshots support--added extra parameter to function
+int incremental_load_vmstate(const char *name);//inc snapshots support
 void hmp_delvm(Monitor *mon, const QDict *qdict);
 void hmp_info_snapshots(Monitor *mon, const QDict *qdict);
 

@@ -148,6 +148,8 @@ void hmp_info_roms(Monitor *mon, const QDict *qdict);
 #define PC_ROM_SIZE        (PC_ROM_MAX - PC_ROM_MIN_VGA)
 
 int rom_add_vga(const char *file);
+void rom_cache_reset(void);//inc snapshots support: clean cache memory
+void rom_reset(void *);//inc snapshots support: it is not static now
 int rom_add_option(const char *file, int32_t bootindex);
 
 #endif

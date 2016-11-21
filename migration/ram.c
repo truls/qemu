@@ -1428,7 +1428,7 @@ static void ram_migration_cleanup(void *opaque)
     struct BitmapRcu *bitmap = migration_bitmap_rcu;
     atomic_rcu_set(&migration_bitmap_rcu, NULL);
     if (bitmap) {
-        memory_global_dirty_log_stop();
+        //memory_global_dirty_log_stop(); //inc snapshots support--function call removed, always track dirty memory
         call_rcu(bitmap, migration_bitmap_free, rcu);
     }
 
@@ -1932,7 +1932,7 @@ static int ram_save_setup(QEMUFile *f, void *opaque)
     ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
     migration_bitmap_rcu = g_new0(struct BitmapRcu, 1);
     migration_bitmap_rcu->bmap = bitmap_new(ram_bitmap_pages);
-    bitmap_set(migration_bitmap_rcu->bmap, 0, ram_bitmap_pages);
+    bitmap_clear(migration_bitmap_rcu->bmap, 0, ram_bitmap_pages);//inc snapshots support--bitmap tracking the dirty ram pages should be cleared first
 
     if (migrate_postcopy_ram()) {
         migration_bitmap_rcu->unsentmap = bitmap_new(ram_bitmap_pages);
@@ -1947,6 +1947,18 @@ static int ram_save_setup(QEMUFile *f, void *opaque)
 
     memory_global_dirty_log_start();
     migration_bitmap_sync();
+    //if number of dirty pages didn't change
+    //then it is trying to save empty snapshot,
+    //so prevent such behavior
+    if (migration_dirty_pages == (ram_bytes_total() >> TARGET_PAGE_BITS)){
+	error_report("Empty snapshot won't be saved!\n");
+    	qemu_mutex_unlock_ramlist();
+    	qemu_mutex_unlock_iothread();
+    	rcu_read_unlock();
+	return -1;
+    }
+   
+
     qemu_mutex_unlock_ramlist();
     qemu_mutex_unlock_iothread();
 
@@ -2455,6 +2467,7 @@ static int ram_load(QEMUFile *f, void *opaque, int version_id)
                 ret = -EINVAL;
                 break;
             }
+            ram_list_clean(addr, block->used_length);
         }
 
         switch (flags & ~RAM_SAVE_FLAG_CONTINUE) {
