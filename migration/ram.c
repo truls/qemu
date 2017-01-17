@@ -2467,7 +2467,6 @@ static int ram_load(QEMUFile *f, void *opaque, int version_id)
                 ret = -EINVAL;
                 break;
             }
-            ram_list_clean(addr, block->used_length);
         }
 
         switch (flags & ~RAM_SAVE_FLAG_CONTINUE) {
@@ -2550,6 +2549,15 @@ static int ram_load(QEMUFile *f, void *opaque, int version_id)
             ret = qemu_file_get_error(f);
         }
     }
+
+    /* Incremental Snapshot Support
+    * Clear dirty bitmap for every RAM page in memory */
+    rcu_read_lock();
+    RAMBlock *block;
+    QLIST_FOREACH_RCU(block, &ram_list.blocks, next) {
+        ram_list_clean(block->offset, block->used_length);
+    }
+    rcu_read_unlock();
 
     rcu_read_unlock();
     DPRINTF("Completed load of VM with exit code %d seq iteration "
