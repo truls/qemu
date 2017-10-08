@@ -36,6 +36,26 @@
 #include "sysemu/cpus.h"
 #include "sysemu/replay.h"
 
+#ifdef CONFIG_PTH
+#define LOOP_LIMIT 5000
+static int sloop;
+static bool sbool = false;
+#define CHECK_LOOP(cpu) \
+    if (++sloop >= LOOP_LIMIT){ \
+        sbool = true; \
+        qemu_cpu_kick(cpu); \
+    }
+#define CHECK_EXIT \
+    if (sbool){ \
+        sbool = false; \
+        break; \
+    } \
+    sloop = 0;
+#else
+#define CHECK_LOOP(cpu)
+#define CHECK_EXIT
+#endif
+
 /* -icount align implementation. */
 
 typedef struct SyncClocks {
@@ -662,9 +682,13 @@ int cpu_exec(CPUState *cpu)
     int ret;
     SyncClocks sc = { 0 };
 
+#ifdef CONFIG_PTH
+    pth_wrapper *w = getWrapper();
     /* replay_interrupt may need current_cpu */
+    w->current_cpu = cpu;
+#else
     current_cpu = cpu;
-
+#endif
     if (cpu_handle_halt(cpu)) {
         return EXCP_HALTED;
     }
@@ -691,7 +715,11 @@ int cpu_exec(CPUState *cpu)
         cc = CPU_GET_CLASS(cpu);
 #else /* buggy compiler */
         /* Assert that the compiler does not smash local variables. */
+#ifdef CONFIG_PTH
+        g_assert(cpu == w->current_cpu);
+#else
         g_assert(cpu == current_cpu);
+#endif
         g_assert(cc == CPU_GET_CLASS(cpu));
 #endif /* buggy compiler */
         cpu->can_do_io = 1;
