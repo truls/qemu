@@ -20,7 +20,6 @@ typedef struct QemuThread QemuThread;
             #include "qemu/thread-pth.h"
             #include <pth.h>
             #include "qemu/thread-pth-internal.h"
-
             /* general success return value */
                 #ifdef OK
                     #undef OK
@@ -30,6 +29,22 @@ typedef struct QemuThread QemuThread;
         #endif
 
 #endif
+
+
+#ifdef CONFIG_PTH
+	#define PTH_UPDATE_CONTEXT \
+        	pth_wrapper* w = pth_get_wrapper();
+
+	#define PTH(NAME) w->NAME
+	#define PTH_X(NAME, ORIG) w->NAME
+	#define PTH_YIELD pth_yield(NULL);
+#else
+	#define PTH(NAME) NAME
+	#define PTH_UPDATE_CONTEXT
+	#define PTH_X(NAME, ORIG) ORIG
+	#define PTH_YIELD
+#endif
+
 #define QEMU_THREAD_JOINABLE 0
 #define QEMU_THREAD_DETACHED 1
 

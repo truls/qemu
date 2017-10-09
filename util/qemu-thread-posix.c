@@ -551,3 +551,4 @@ void *qemu_thread_join(QemuThread *thread)
     }
     return ret;
 }
+#endif

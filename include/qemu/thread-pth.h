@@ -1,14 +1,12 @@
 #ifdef CONFIG_PTH
-
 #ifndef QEMU_THREAD_PTH_H
 #define QEMU_THREAD_PTH_H
 
+#include "util/coroutine-ucontext-pth.h"
 #include "qemu/thread.h"
-#include <semaphore.h>
-
 #include <pth.h>
+#include <semaphore.h>
 #include "qemu/thread-pth-internal.h"
-
 
 typedef QemuMutex QemuRecMutex;
 #define qemu_rec_mutex_destroy qemu_mutex_destroy
@@ -16,17 +14,21 @@ typedef QemuMutex QemuRecMutex;
 #define qemu_rec_mutex_try_lock qemu_mutex_try_lock
 #define qemu_rec_mutex_unlock qemu_mutex_unlock
 
-//#include "qemu/queue.h"
-#include "notify.h"
-#include "util/coroutine-ucontext-pth.h"
 typedef struct AioHandler AioHandler;
-typedef struct CPUState CPUState;
-typedef struct Coroutine Coroutine;
-typedef struct rcu_reader_data rcu_reader_data;
+
+struct rcu_reader_data {
+    /* Data used by both reader and synchronize_rcu() */
+    unsigned long ctr;
+    bool waiting;
+
+    /* Data used by reader only */
+    unsigned depth;
+
+    /* Data used for registry, protected by rcu_registry_lock */
+    QLIST_ENTRY(rcu_reader_data) node;
+};
+
 typedef struct IOThread IOThread;
-
-typedef struct CoroutineUContext CoroutineUContext;
-
 typedef struct pth_wrapper
 {
     pth_t pth_thread;
@@ -50,24 +52,19 @@ typedef struct pth_wrapper
     QSLIST_HEAD(, Coroutine) alloc_pool;
     unsigned int alloc_pool_size;
     Notifier coroutine_pool_cleanup_notifier;
-    CoroutineUContext * leader; // different from original - this is pointer
+    CoroutineUContext leader;
     Coroutine *current;
 
     //iothread
     IOThread *my_iothread;
 
     // rcu
-    rcu_reader_data * rcu_reader;// different from original - this is pointer
+    struct rcu_reader_data rcu_reader;
 
     // translation block context
     int have_tb_lock;
 
-
-    // linux user
-#ifdef CONFIG_LINUX_USER
-    CPUState* thread_cpu;
-    int mmap_lock_count;
-#endif
+    char* thread_name;
 }pth_wrapper;
 
 typedef struct  pthpthread_st              *pthpthread_t;
@@ -102,25 +99,18 @@ struct QemuEvent {
 };
 
 struct QemuThread {
-    pth_wrapper thread;
+    pth_wrapper wrapper;
 };
 
-//Linked List Structure for QemuThread - PTH ONLY
 typedef struct threadlist
 {
-    QemuThread * t;
-    struct threadlist * next;
-    size_t sz;
+    QemuThread * qemuthread;
+    QLIST_ENTRY(threadlist) next;
 }threadlist;
 
-void  get_current_thread(QemuThread** t);
-void  get_threadlist_head(threadlist ** h);
-void  initThreadList(void);
-bool  nodeExists(QemuThread** t);
-
-pth_wrapper* getWrapper(void);
+pth_wrapper* pth_get_wrapper(void);
+void initMainThread(void);
 
 
-#endif
-
-#endif
+#endif // QEMU_THREAD_PTH_H
+#endif // CONFIG_PTH

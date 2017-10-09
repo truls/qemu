@@ -175,7 +175,11 @@ void synchronize_rcu(void)
  * from liburcu.  Note that head is only used by the consumer.
  */
 static struct rcu_head dummy;
+#ifndef CONFIG_PTH
 static struct rcu_head *head = &dummy, **tail = &dummy.next;
+#else
+static struct rcu_head **tail = &dummy.next;
+#endif
 static int rcu_call_count;
 static QemuEvent rcu_call_ready_event;
 
@@ -187,7 +191,7 @@ static void enqueue(struct rcu_head *node)
     old_tail = atomic_xchg(&tail, &node->next);
     atomic_mb_set(old_tail, node);
 }
-
+#ifndef CONFIG_PTH
 static struct rcu_head *try_dequeue(void)
 {
     struct rcu_head *node, *next;
@@ -277,6 +281,7 @@ static void *call_rcu_thread(void *opaque)
     }
     abort();
 }
+#endif
 
 void call_rcu1(struct rcu_head *node, void (*func)(struct rcu_head *node))
 {
@@ -288,40 +293,22 @@ void call_rcu1(struct rcu_head *node, void (*func)(struct rcu_head *node))
 
 void rcu_register_thread(void)
 {
-#ifdef CONFIG_PTH
-    initThreadList();
+    PTH_UPDATE_CONTEXT
 
-    pth_wrapper* w = getWrapper();
-
-    if (!w->rcu_reader)
-             w->rcu_reader = calloc(1, sizeof(struct rcu_reader_data));
-
-    assert(w->rcu_reader->ctr == 0);
+    assert(PTH(rcu_reader).ctr == 0);
     qemu_mutex_lock(&rcu_registry_lock);
-    QLIST_INSERT_HEAD(&registry, &(*w->rcu_reader), node);
+    QLIST_INSERT_HEAD(&registry, &PTH(rcu_reader), node);
     qemu_mutex_unlock(&rcu_registry_lock);
-#else
-    assert(rcu_reader.ctr == 0);
-    qemu_mutex_lock(&rcu_registry_lock);
-    QLIST_INSERT_HEAD(&registry, &rcu_reader, node);
-    qemu_mutex_unlock(&rcu_registry_lock);
-#endif
 }
 
 void rcu_unregister_thread(void)
 {
-#ifdef CONFIG_PTH
-    pth_wrapper* w = getWrapper();
+    PTH_UPDATE_CONTEXT
     qemu_mutex_lock(&rcu_registry_lock);
-    QLIST_REMOVE(&(*w->rcu_reader), node);
+    QLIST_REMOVE(&PTH(rcu_reader), node);
     qemu_mutex_unlock(&rcu_registry_lock);
-#else
-    qemu_mutex_lock(&rcu_registry_lock);
-    QLIST_REMOVE(&rcu_reader, node);
-    qemu_mutex_unlock(&rcu_registry_lock);
-#endif
 }
-
+#ifndef CONFIG_PTH
 static void rcu_init_complete(void)
 {
     QemuThread thread;
@@ -340,6 +327,7 @@ static void rcu_init_complete(void)
 
     rcu_register_thread();
 }
+#endif
 
 static int atfork_depth = 1;
 
@@ -353,7 +341,7 @@ void rcu_disable_atfork(void)
     atfork_depth--;
 }
 
-#ifdef CONFIG_POSIX
+#if defined(CONFIG_POSIX) && !defined(CONFIG_PTH)
 static void rcu_init_lock(void)
 {
     if (atfork_depth < 1) {
@@ -383,22 +371,13 @@ static void rcu_init_child(void)
     memset(&registry, 0, sizeof(registry));
     rcu_init_complete();
 }
-#endif
+
 
 static void __attribute__((__constructor__)) rcu_init(void)
 {
-#ifdef CONFIG_PTH
-    initThreadList();
-    pth_wrapper* w = getWrapper();
-    if (w->rcu_reader == NULL){
-        w->rcu_reader = calloc(1, sizeof(struct rcu_reader_data));
-    }
-
-    pthpthread_atfork(rcu_init_lock, rcu_init_unlock, rcu_init_unlock);
-#else
-#ifdef CONFIG_POSIX
+#if defined(CONFIG_POSIX)
     pthread_atfork(rcu_init_lock, rcu_init_unlock, rcu_init_child);
-#endif
 #endif
     rcu_init_complete();
 }
+#endif

@@ -112,10 +112,12 @@ static int aio_epoll(AioContext *ctx, GPollFD *pfds,
     int i, ret = 0;
     struct epoll_event events[128];
 
-    assert(npfd == 1);
+    PTH_UPDATE_CONTEXT
+
+    assert(PTH(npfd) == 1);
     assert(pfds[0].fd == ctx->epollfd);
     if (timeout > 0) {
-        ret = qemu_poll_ns(pfds, npfd, timeout);
+        ret = qemu_poll_ns(pfds, PTH(npfd), timeout);
     }
     if (timeout <= 0 || ret > 0) {
         ret = epoll_wait(ctx->epollfd, events,
@@ -146,13 +148,15 @@ static bool aio_epoll_enabled(AioContext *ctx)
 static bool aio_epoll_check_poll(AioContext *ctx, GPollFD *pfds,
                                  unsigned npfd, int64_t timeout)
 {
+    PTH_UPDATE_CONTEXT
+
     if (!ctx->epoll_available) {
         return false;
     }
     if (aio_epoll_enabled(ctx)) {
         return true;
     }
-    if (npfd >= EPOLL_ENABLE_THRESHOLD) {
+    if (PTH(npfd) >= EPOLL_ENABLE_THRESHOLD) {
         if (aio_epoll_try_enable(ctx)) {
             return true;
         } else {
@@ -459,63 +463,35 @@ static __thread Notifier pollfds_cleanup_notifier;
 #endif
 static void pollfds_cleanup(Notifier *n, void *unused)
 {
-#ifdef CONFIG_PTH
-    pth_wrapper* w = getWrapper();
-    g_assert(w->npfd == 0);
-    g_free(w->pollfds);
-    g_free(w->nodes);
-    w->nalloc = 0;
-#else
-    g_assert(npfd == 0);
-    g_free(pollfds);
-    g_free(nodes);
-    nalloc = 0;
-#endif
+    PTH_UPDATE_CONTEXT
+    g_assert(PTH(npfd) == 0);
+    g_free(PTH(pollfds));
+    g_free(PTH(nodes));
+    PTH(nalloc) = 0;
 }
 
 static void add_pollfd(AioHandler *node)
 {
-#ifdef CONFIG_PTH
-    pth_wrapper* w = getWrapper();
+    PTH_UPDATE_CONTEXT
 
-    if (w->npfd == w->nalloc) {
-        if (w->nalloc == 0) {
-            w->pollfds_cleanup_notifier.notify = pollfds_cleanup;
-            qemu_thread_atexit_add(&w->pollfds_cleanup_notifier);
-            w->nalloc = 8;
+    if (PTH(npfd) == PTH(nalloc)) {
+        if (PTH(nalloc) == 0) {
+            PTH(pollfds_cleanup_notifier).notify = pollfds_cleanup;
+            qemu_thread_atexit_add(&PTH(pollfds_cleanup_notifier));
+            PTH(nalloc) = 8;
         } else {
-            g_assert(w->nalloc <= INT_MAX);
-            w->nalloc *= 2;
+            g_assert(PTH(nalloc) <= INT_MAX);
+            PTH(nalloc) *= 2;
         }
-        w->pollfds = g_renew(GPollFD, w->pollfds, w->nalloc);
-        w->nodes = g_renew(AioHandler *, w->nodes, w->nalloc);
+        PTH(pollfds) = g_renew(GPollFD, PTH(pollfds), PTH(nalloc));
+        PTH(nodes) = g_renew(AioHandler *, PTH(nodes), PTH(nalloc));
     }
-    w->nodes[w->npfd] = node;
-    w->pollfds[w->npfd] = (GPollFD) {
+    PTH(nodes)[PTH(npfd)] = node;
+    PTH(pollfds)[PTH(npfd)] = (GPollFD) {
         .fd = node->pfd.fd,
         .events = node->pfd.events,
     };
-    w->npfd++;
-#else
-    if (npfd == nalloc) {
-        if (nalloc == 0) {
-            pollfds_cleanup_notifier.notify = pollfds_cleanup;
-            qemu_thread_atexit_add(&pollfds_cleanup_notifier);
-            nalloc = 8;
-        } else {
-            g_assert(nalloc <= INT_MAX);
-            nalloc *= 2;
-        }
-        pollfds = g_renew(GPollFD, pollfds, nalloc);
-        nodes = g_renew(AioHandler *, nodes, nalloc);
-    }
-    nodes[npfd] = node;
-    pollfds[npfd] = (GPollFD) {
-        .fd = node->pfd.fd,
-        .events = node->pfd.events,
-    };
-    npfd++;
-#endif
+    PTH(npfd)++;
 }
 
 static bool run_poll_handlers_once(AioContext *ctx)
@@ -607,9 +583,7 @@ static bool try_poll_mode(AioContext *ctx, bool blocking)
 
 bool aio_poll(AioContext *ctx, bool blocking)
 {
-#ifdef CONFIG_PTH
-    pth_wrapper* w = getWrapper();
-#endif
+    PTH_UPDATE_CONTEXT
 
     AioHandler *node;
     int i;
@@ -637,11 +611,7 @@ bool aio_poll(AioContext *ctx, bool blocking)
 
     progress = try_poll_mode(ctx, blocking);
     if (!progress) {
-#ifdef CONFIG_PTH
-   assert(w->npfd == 0);
-#else
-        assert(npfd == 0);
-#endif
+   assert(PTH(npfd) == 0);
         /* fill pollfds */
 
         if (!aio_epoll_enabled(ctx)) {
@@ -656,35 +626,19 @@ bool aio_poll(AioContext *ctx, bool blocking)
         timeout = blocking ? aio_compute_timeout(ctx) : 0;
 
         /* wait until next event */
-#ifdef CONFIG_PTH
-        if (aio_epoll_check_poll(ctx, w->pollfds, w->npfd, timeout)) {
+         if (aio_epoll_check_poll(ctx, PTH(pollfds), PTH(npfd), timeout)) {
 
             AioHandler epoll_handler;
 
             epoll_handler.pfd.fd = ctx->epollfd;
             epoll_handler.pfd.events = G_IO_IN | G_IO_OUT | G_IO_HUP | G_IO_ERR;
-            w->npfd = 0;
+            PTH(npfd) = 0;
             add_pollfd(&epoll_handler);
-            ret = aio_epoll(ctx, w->pollfds, w->npfd, timeout);
+            ret = aio_epoll(ctx, PTH(pollfds), PTH(npfd), timeout);
         } else  {
-            ret = qemu_poll_ns(w->pollfds, w->npfd, timeout);
+            ret = qemu_poll_ns(PTH(pollfds), PTH(npfd), timeout);
         }
     }
-#else
-         if (aio_epoll_check_poll(ctx, pollfds, npfd, timeout)) {
-
-            AioHandler epoll_handler;
-
-            epoll_handler.pfd.fd = ctx->epollfd;
-            epoll_handler.pfd.events = G_IO_IN | G_IO_OUT | G_IO_HUP | G_IO_ERR;
-            npfd = 0;
-            add_pollfd(&epoll_handler);
-            ret = aio_epoll(ctx, pollfds, npfd, timeout);
-        } else  {
-            ret = qemu_poll_ns(pollfds, npfd, timeout);
-        }
-    }
-#endif
     if (blocking) {
         atomic_sub(&ctx->notify_me, 2);
     }
@@ -734,22 +688,12 @@ bool aio_poll(AioContext *ctx, bool blocking)
 
     /* if we have any readable fds, dispatch event */
     if (ret > 0) {
-#ifdef CONFIG_PTH
-        for (i = 0; i < w->npfd; i++) {
-            w->nodes[i]->pfd.revents = w->pollfds[i].revents;
+        for (i = 0; i < PTH(npfd); i++) {
+            PTH(nodes)[i]->pfd.revents = PTH(pollfds)[i].revents;
         }
-#else
-        for (i = 0; i < npfd; i++) {
-            nodes[i]->pfd.revents = pollfds[i].revents;
-        }
-#endif
     }
 
-#ifdef CONFIG_PTH
-    w->npfd = 0;
-#else
-     npfd = 0;
-#endif
+     PTH(npfd) = 0;
     progress |= aio_bh_poll(ctx);
 
     if (ret > 0) {

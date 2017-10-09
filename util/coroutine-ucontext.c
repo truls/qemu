@@ -26,6 +26,7 @@
 #include <ucontext.h>
 #include "qemu-common.h"
 #include "qemu/coroutine_int.h"
+#include "include/qemu/thread.h"
 
 #ifndef CONFIG_PTH
 #ifdef CONFIG_VALGRIND_H
@@ -172,19 +173,12 @@ CoroutineAction __attribute__((noinline))
 qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
                       CoroutineAction action)
 {
-#ifdef CONFIG_PTH
-    pth_wrapper* w = getWrapper();
-#endif
-
+    PTH_UPDATE_CONTEXT
     CoroutineUContext *from = DO_UPCAST(CoroutineUContext, base, from_);
     CoroutineUContext *to = DO_UPCAST(CoroutineUContext, base, to_);
     int ret;
 
-#ifdef CONFIG_PTH
-    w->current = to_;
-#else
-    current = to_;
-#endif
+    PTH(current) = to_;
 
     ret = sigsetjmp(from->env, 0);
     if (ret == 0) {
@@ -195,30 +189,15 @@ qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
 
 Coroutine *qemu_coroutine_self(void)
 {
-#ifdef CONFIG_PTH
-    pth_wrapper* w = getWrapper();
-
-    if(!w->leader)
-        w->leader = calloc(1,sizeof(CoroutineUContext));
-
-    if (!w->current) {
-        w->current = &w->leader->base;
+    PTH_UPDATE_CONTEXT
+    if (!PTH(current)) {
+        PTH(current) = &PTH(leader).base;
     }
-    return w->current;
-#else
-    if (!current) {
-        current = &leader.base;
-    }
-    return current;
-#endif
+    return PTH(current);
 }
 
 bool qemu_in_coroutine(void)
 {
-#ifdef CONFIG_PTH
-    pth_wrapper* w = getWrapper();
-    return w->current && w->current->caller;
-#else
-    return current && current->caller;
-#endif
+    PTH_UPDATE_CONTEXT
+    return PTH(current) && PTH(current)->caller;
 }

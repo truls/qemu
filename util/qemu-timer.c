@@ -321,7 +321,7 @@ int qemu_poll_ns(GPollFD *fds, guint nfds, int64_t timeout)
   int ret = 0;
 
   ret = pth_poll((struct pollfd *)fds, nfds, 0);
-  pth_yield(NULL);
+  PTH_YIELD
 
  return ret;
 #elif CONFIG_PPOLL

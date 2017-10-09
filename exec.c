@@ -2334,9 +2334,7 @@ ram_addr_t qemu_ram_addr_from_host(void *ptr)
 static void notdirty_mem_write(void *opaque, hwaddr ram_addr,
                                uint64_t val, unsigned size)
 {
-#ifdef CONFIG_PTH
-    pth_wrapper* w = getWrapper();
-#endif
+    PTH_UPDATE_CONTEXT
     bool locked = false;
 
     assert(tcg_enabled());
@@ -2371,11 +2369,7 @@ static void notdirty_mem_write(void *opaque, hwaddr ram_addr,
     /* we remove the notdirty callback only if the code has been
        flushed */
     if (!cpu_physical_memory_is_clean(ram_addr)) {
-#ifdef CONFIG_PTH
-        tlb_set_dirty(w->current_cpu, w->current_cpu->mem_io_vaddr);
-#else
-        tlb_set_dirty(current_cpu, current_cpu->mem_io_vaddr);
-#endif
+        tlb_set_dirty(PTH(current_cpu), PTH(current_cpu)->mem_io_vaddr);
     }
 }
 
@@ -2394,13 +2388,8 @@ static const MemoryRegionOps notdirty_mem_ops = {
 /* Generate a debug exception if a watchpoint has been hit.  */
 static void check_watchpoint(int offset, int len, MemTxAttrs attrs, int flags)
 {
-#ifdef CONFIG_PTH
-    pth_wrapper* w = getWrapper();
-    CPUState *cpu = w->current_cpu;
-#else
-    CPUState *cpu = current_cpu;
-#endif
-
+    PTH_UPDATE_CONTEXT
+    CPUState *cpu = PTH(current_cpu);
     CPUClass *cc = CPU_GET_CLASS(cpu);
     CPUArchState *env = cpu->env_ptr;
     target_ulong pc, cs_base;
@@ -2463,18 +2452,12 @@ static void check_watchpoint(int offset, int len, MemTxAttrs attrs, int flags)
 static MemTxResult watch_mem_read(void *opaque, hwaddr addr, uint64_t *pdata,
                                   unsigned size, MemTxAttrs attrs)
 {
-#ifdef CONFIG_PTH
-    pth_wrapper* w = getWrapper();
+    PTH_UPDATE_CONTEXT
     MemTxResult res;
     uint64_t data;
-    int asidx = cpu_asidx_from_attrs(w->current_cpu, attrs);
-    AddressSpace *as = w->current_cpu->cpu_ases[asidx].as;
-#else
-    MemTxResult res;
-    uint64_t data;
-    int asidx = cpu_asidx_from_attrs(current_cpu, attrs);
-    AddressSpace *as = current_cpu->cpu_ases[asidx].as;
-#endif
+    int asidx = cpu_asidx_from_attrs(PTH(current_cpu), attrs);
+    AddressSpace *as = PTH(current_cpu)->cpu_ases[asidx].as;
+
     check_watchpoint(addr & ~TARGET_PAGE_MASK, size, attrs, BP_MEM_READ);
     switch (size) {
     case 1:
@@ -2496,16 +2479,11 @@ static MemTxResult watch_mem_write(void *opaque, hwaddr addr,
                                    uint64_t val, unsigned size,
                                    MemTxAttrs attrs)
 {
-#ifdef CONFIG_PTH
-    pth_wrapper* w = getWrapper();
+    PTH_UPDATE_CONTEXT
     MemTxResult res;
-    int asidx = cpu_asidx_from_attrs(w->current_cpu, attrs);
-    AddressSpace *as = w->current_cpu->cpu_ases[asidx].as;
-#else
-    MemTxResult res;
-    int asidx = cpu_asidx_from_attrs(current_cpu, attrs);
-    AddressSpace *as = current_cpu->cpu_ases[asidx].as;
-#endif
+    int asidx = cpu_asidx_from_attrs(PTH(current_cpu), attrs);
+    AddressSpace *as = PTH(current_cpu)->cpu_ases[asidx].as;
+
     check_watchpoint(addr & ~TARGET_PAGE_MASK, size, attrs, BP_MEM_WRITE);
     switch (size) {
     case 1:

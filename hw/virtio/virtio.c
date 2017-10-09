@@ -1159,16 +1159,10 @@ static enum virtio_device_endian virtio_default_endian(void)
 
 static enum virtio_device_endian virtio_current_cpu_endian(void)
 {
-#ifdef CONFIG_PTH
-    pth_wrapper* w = getWrapper();
-    CPUClass *cc = CPU_GET_CLASS(w->current_cpu);
+    PTH_UPDATE_CONTEXT
+    CPUClass *cc = CPU_GET_CLASS(PTH(current_cpu));
 
-    if (cc->virtio_is_big_endian(w->current_cpu)) {
-#else
-    CPUClass *cc = CPU_GET_CLASS(current_cpu);
-
-    if (cc->virtio_is_big_endian(current_cpu)) {
-#endif
+    if (cc->virtio_is_big_endian(PTH(current_cpu))) {
         return VIRTIO_DEVICE_ENDIAN_BIG;
     } else {
         return VIRTIO_DEVICE_ENDIAN_LITTLE;
@@ -1188,19 +1182,13 @@ static void virtio_virtqueue_reset_region_cache(struct VirtQueue *vq)
 
 void virtio_reset(void *opaque)
 {
-#ifdef CONFIG_PTH
-    pth_wrapper* w = getWrapper();
-#endif
+    PTH_UPDATE_CONTEXT
     VirtIODevice *vdev = opaque;
     VirtioDeviceClass *k = VIRTIO_DEVICE_GET_CLASS(vdev);
     int i;
 
     virtio_set_status(vdev, 0);
-#ifdef CONFIG_PTH
-    if (w->current_cpu) {
-#else
-    if (current_cpu) {
-#endif
+    if (PTH(current_cpu)) {
         /* Guest initiated reset */
         vdev->device_endian = virtio_current_cpu_endian();
     } else {

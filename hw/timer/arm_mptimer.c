@@ -39,18 +39,8 @@
 
 static inline int get_current_cpu(ARMMPTimerState *s)
 {
-#ifdef CONFIG_PTH
-        pth_wrapper *w = getWrapper();
-        int cpu_id = w->current_cpu ? w->current_cpu->cpu_index : 0;
-
-        if (cpu_id >= s->num_cpu) {
-            hw_error("arm_mptimer: num-cpu %d but this cpu is %d!\n",
-                     s->num_cpu, cpu_id);
-        }
-
-        return cpu_id;
-#else
-    int cpu_id = current_cpu ? current_cpu->cpu_index : 0;
+    PTH_UPDATE_CONTEXT
+    int cpu_id = PTH(current_cpu) ? PTH(current_cpu)->cpu_index : 0;
 
     if (cpu_id >= s->num_cpu) {
         hw_error("arm_mptimer: num-cpu %d but this cpu is %d!\n",
@@ -58,7 +48,6 @@ static inline int get_current_cpu(ARMMPTimerState *s)
     }
 
     return cpu_id;
-#endif
 }
 
 static inline void timerblock_update_irq(TimerBlock *tb)

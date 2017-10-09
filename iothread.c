@@ -41,40 +41,18 @@ static __thread IOThread *my_iothread;
 
 AioContext *qemu_get_current_aio_context(void)
 {
-#ifdef CONFIG_PTH
-    pth_wrapper * w = getWrapper();
-    return w->my_iothread ? w->my_iothread->ctx : qemu_get_aio_context();
-#else
-    return my_iothread ? my_iothread->ctx : qemu_get_aio_context();
-#endif
+    PTH_UPDATE_CONTEXT
+    return PTH(my_iothread) ? PTH(my_iothread)->ctx : qemu_get_aio_context();
 }
 
 static void *iothread_run(void *opaque)
 {
-#ifdef CONFIG_PTH
-    pth_wrapper * w = getWrapper();
+    PTH_UPDATE_CONTEXT
     IOThread *iothread = opaque;
 
     rcu_register_thread();
 
-    w->my_iothread = iothread;
-    qemu_mutex_lock(&iothread->init_done_lock);
-    iothread->thread_id = qemu_get_thread_id();
-    qemu_cond_signal(&iothread->init_done_cond);
-    qemu_mutex_unlock(&iothread->init_done_lock);
-
-    while (!atomic_read(&iothread->stopping)) {
-        aio_poll(iothread->ctx, true);
-    }
-
-    rcu_unregister_thread();
-    return NULL;
-#else
-    IOThread *iothread = opaque;
-
-    rcu_register_thread();
-
-    my_iothread = iothread;
+    PTH(my_iothread) = iothread;
     qemu_mutex_lock(&iothread->init_done_lock);
     iothread->thread_id = qemu_get_thread_id();
     qemu_cond_signal(&iothread->init_done_cond);
@@ -101,7 +79,6 @@ static void *iothread_run(void *opaque)
 
     rcu_unregister_thread();
     return NULL;
-#endif
 }
 
 void iothread_stop(IOThread *iothread)

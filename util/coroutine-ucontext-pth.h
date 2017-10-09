@@ -1,3 +1,4 @@
+#ifdef CONFIG_PTH
 #ifndef COROUTINE_UCONTEXT_PTH_H
 #define COROUTINE_UCONTEXT_PTH_H
 
@@ -5,10 +6,8 @@
 #include <ucontext.h>
 #include "qemu-common.h"
 #include "qemu/coroutine_int.h"
-#include "qemu/thread.h"
-
-#ifdef CONFIG_PTH
-
+#include "include/qemu/coroutine.h"
+#include <setjmp.h>
 #ifdef CONFIG_VALGRIND_H
 #include <valgrind/valgrind.h>
 #endif
@@ -24,6 +23,6 @@ typedef struct CoroutineUContext{
 #endif
 
 } CoroutineUContext;
-#endif
 
-#endif
+#endif //COROUTINE_UCONTEXT_PTH_H
+#endif //CONFIG_PTH

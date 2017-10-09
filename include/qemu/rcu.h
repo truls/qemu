@@ -55,6 +55,7 @@ extern unsigned long rcu_gp_ctr;
 
 extern QemuEvent rcu_gp_event;
 
+#ifndef CONFIG_PTH
 struct rcu_reader_data {
     /* Data used by both reader and synchronize_rcu() */
     unsigned long ctr;
@@ -66,16 +67,18 @@ struct rcu_reader_data {
     /* Data used for registry, protected by rcu_registry_lock */
     QLIST_ENTRY(rcu_reader_data) node;
 };
+#else
+#include "include/qemu/thread-pth.h"
+#endif
+
 #ifndef CONFIG_PTH
 extern __thread struct rcu_reader_data rcu_reader;
 #endif
 
 static inline void rcu_read_lock(void)
 {
-#ifdef CONFIG_PTH
-    pth_wrapper* w = getWrapper();
-
-    struct rcu_reader_data *p_rcu_reader = w->rcu_reader;
+    PTH_UPDATE_CONTEXT
+    struct rcu_reader_data *p_rcu_reader = &PTH(rcu_reader);
     unsigned ctr;
 
     if (p_rcu_reader->depth++ > 0) {
@@ -84,24 +87,12 @@ static inline void rcu_read_lock(void)
 
     ctr = atomic_read(&rcu_gp_ctr);
     atomic_xchg(&p_rcu_reader->ctr, ctr);
-#else
-    struct rcu_reader_data *p_rcu_reader = &rcu_reader;
-    unsigned ctr;
-
-    if (p_rcu_reader->depth++ > 0) {
-        return;
-    }
-
-    ctr = atomic_read(&rcu_gp_ctr);
-    atomic_xchg(&p_rcu_reader->ctr, ctr);
-#endif
 }
 
 static inline void rcu_read_unlock(void)
 {
-#ifdef CONFIG_PTH
-    pth_wrapper* w = getWrapper();
-    struct rcu_reader_data *p_rcu_reader = w->rcu_reader;
+    PTH_UPDATE_CONTEXT
+    struct rcu_reader_data *p_rcu_reader = &PTH(rcu_reader);
 
     assert(p_rcu_reader->depth != 0);
     if (--p_rcu_reader->depth > 0) {
@@ -113,20 +104,6 @@ static inline void rcu_read_unlock(void)
         atomic_set(&p_rcu_reader->waiting, false);
         qemu_event_set(&rcu_gp_event);
     }
-#else
-    struct rcu_reader_data *p_rcu_reader = &rcu_reader;
-
-    assert(p_rcu_reader->depth != 0);
-    if (--p_rcu_reader->depth > 0) {
-        return;
-    }
-
-    atomic_xchg(&p_rcu_reader->ctr, 0);
-    if (unlikely(atomic_read(&p_rcu_reader->waiting))) {
-        atomic_set(&p_rcu_reader->waiting, false);
-        qemu_event_set(&rcu_gp_event);
-    }
-#endif
 }
 
 extern void synchronize_rcu(void);

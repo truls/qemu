@@ -933,7 +933,6 @@ for opt do
     # configure to be used by RPM and similar macros that set
     # lots of directory switches by default.
   ;;
-
 #**************************
 #PARSA START
 #**************************

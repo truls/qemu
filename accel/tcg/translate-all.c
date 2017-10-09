@@ -77,13 +77,8 @@
  * mmap_lock.
  */
 #ifdef CONFIG_SOFTMMU
-    #ifdef CONFIG_PTH
-        #define assert_memory_lock()   pth_wrapper* w1 = getWrapper(); \
-                                                    tcg_debug_assert(w1->have_tb_lock)
-
-    #else
-#define assert_memory_lock() tcg_debug_assert(have_tb_lock)
-    #endif
+#define assert_memory_lock() \
+    tcg_debug_assert(PTH(have_tb_lock))
 #else
 #define assert_memory_lock() tcg_debug_assert(have_mmap_lock())
 #endif
@@ -168,53 +163,34 @@ static void page_table_config_init(void)
     assert(v_l1_shift % V_L2_BITS == 0);
     assert(v_l2_levels >= 0);
 }
-#ifndef CONFIG_PTH
-#define assert_tb_locked() tcg_debug_assert(have_tb_lock)
-#define assert_tb_unlocked() tcg_debug_assert(!have_tb_lock)
-#else
+#define assert_tb_locked() \
+        tcg_debug_assert(PTH(have_tb_lock))
 
-#define assert_tb_locked() pth_wrapper* w = getWrapper(); \
-                                            tcg_debug_assert(w->have_tb_lock)
-#define assert_tb_unlocked() pth_wrapper* w = getWrapper(); \
-                                                tcg_debug_assert(!w->have_tb_lock)
-#endif
+#define assert_tb_unlocked() \
+        tcg_debug_assert(!PTH(have_tb_lock))
 
 void tb_lock(void)
 {
+    PTH_UPDATE_CONTEXT
     assert_tb_unlocked();
     qemu_mutex_lock(&tcg_ctx.tb_ctx.tb_lock);
-#ifdef CONFIG_PTH
-    w->have_tb_lock++;
-#else
-    have_tb_lock++;
-#endif
+    PTH(have_tb_lock)++;
 }
 
 void tb_unlock(void)
 {
+    PTH_UPDATE_CONTEXT
     assert_tb_locked();
-#ifdef CONFIG_PTH
-    w->have_tb_lock--;
-#else
-    have_tb_lock--;
-#endif
+    PTH(have_tb_lock)--;
     qemu_mutex_unlock(&tcg_ctx.tb_ctx.tb_lock);
 }
 
 void tb_lock_reset(void)
 {
-#ifdef CONFIG_PTH
-    pth_wrapper* w = getWrapper();
-    if (w->have_tb_lock) {
-#else
-    if (have_tb_lock) {
-#endif
+    PTH_UPDATE_CONTEXT
+    if (PTH(have_tb_lock)) {
         qemu_mutex_unlock(&tcg_ctx.tb_ctx.tb_lock);
-#ifdef CONFIG_PTH
-    w->have_tb_lock = 0;
-#else
-        have_tb_lock = 0;
-#endif
+        PTH(have_tb_lock) = 0;
     }
 }
 
@@ -475,6 +451,7 @@ static void page_init(void)
  */
 static PageDesc *page_find_alloc(tb_page_addr_t index, int alloc)
 {
+    PTH_UPDATE_CONTEXT
     PageDesc *pd;
     void **lp;
     int i;
@@ -842,6 +819,7 @@ void tcg_exec_init(unsigned long tb_size)
  */
 static TranslationBlock *tb_alloc(target_ulong pc)
 {
+    PTH_UPDATE_CONTEXT
     TranslationBlock *tb;
     TBContext *ctx;
 
@@ -863,6 +841,7 @@ static TranslationBlock *tb_alloc(target_ulong pc)
 /* Called with tb_lock held.  */
 void tb_free(TranslationBlock *tb)
 {
+    PTH_UPDATE_CONTEXT
     assert_tb_locked();
 
     /* In practice this is mostly used for single use temporary TB
@@ -1098,6 +1077,7 @@ static inline void tb_jmp_unlink(TranslationBlock *tb)
  */
 void tb_phys_invalidate(TranslationBlock *tb, tb_page_addr_t page_addr)
 {
+    PTH_UPDATE_CONTEXT
     CPUState *cpu;
     PageDesc *p;
     uint32_t h;
@@ -1180,6 +1160,7 @@ static void build_page_bitmap(PageDesc *p)
 static inline void tb_alloc_page(TranslationBlock *tb,
                                  unsigned int n, tb_page_addr_t page_addr)
 {
+    PTH_UPDATE_CONTEXT
     PageDesc *p;
 #ifndef CONFIG_USER_ONLY
     bool page_already_protected;
@@ -1241,6 +1222,7 @@ static inline void tb_alloc_page(TranslationBlock *tb,
 static void tb_link_page(TranslationBlock *tb, tb_page_addr_t phys_pc,
                          tb_page_addr_t phys_page2)
 {
+    PTH_UPDATE_CONTEXT
     uint32_t h;
 
     assert_memory_lock();
@@ -1267,6 +1249,7 @@ TranslationBlock *tb_gen_code(CPUState *cpu,
                               target_ulong pc, target_ulong cs_base,
                               uint32_t flags, int cflags)
 {
+    PTH_UPDATE_CONTEXT
     CPUArchState *env = cpu->env_ptr;
     TranslationBlock *tb;
     tb_page_addr_t phys_pc, phys_page2;
@@ -1443,6 +1426,7 @@ static void tb_invalidate_phys_range_1(tb_page_addr_t start, tb_page_addr_t end)
 #ifdef CONFIG_SOFTMMU
 void tb_invalidate_phys_range(tb_page_addr_t start, tb_page_addr_t end)
 {
+    PTH_UPDATE_CONTEXT
     assert_tb_locked();
     tb_invalidate_phys_range_1(start, end);
 }
@@ -1468,6 +1452,7 @@ void tb_invalidate_phys_range(tb_page_addr_t start, tb_page_addr_t end)
 void tb_invalidate_phys_page_range(tb_page_addr_t start, tb_page_addr_t end,
                                    int is_cpu_write_access)
 {
+    PTH_UPDATE_CONTEXT
     TranslationBlock *tb, *tb_next;
 #if defined(TARGET_HAS_PRECISE_SMC)
     CPUState *cpu = current_cpu;
@@ -1569,6 +1554,7 @@ void tb_invalidate_phys_page_range(tb_page_addr_t start, tb_page_addr_t end,
  */
 void tb_invalidate_phys_page_fast(tb_page_addr_t start, int len)
 {
+    PTH_UPDATE_CONTEXT
     PageDesc *p;
 
 #if 0

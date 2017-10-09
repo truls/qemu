@@ -4,6 +4,7 @@
 #include "qemu/thread.h"
 #include "qemu/atomic.h"
 #include "qemu/notify.h"
+#include "include/qemu/thread-pth.h"
 
 
 static bool name_threads;
@@ -366,7 +367,7 @@ void qemu_event_reset(QemuEvent *ev)
          */
         atomic_or(&ev->value, EV_FREE);
     
-	pth_yield(NULL);
+    PTH_YIELD
     }
 }
 
@@ -451,72 +452,26 @@ pth_t get_main_thread(void) {
   return main_thread;
 }
 
-static bool threalist_initialized = false;
+static bool threadlist_initialized = false;
+static QLIST_HEAD(, threadlist) pth_wrappers =
+        QLIST_HEAD_INITIALIZER(pth_wrappers);
+static int threadlist_size;
 
-threadlist * head;
-threadlist * current;
-threadlist* tmp;
 
-void  get_current_thread(QemuThread** t)
+void initMainThread(void)
 {
-    pth_t p = pth_self();
-    threadlist * tmp = head;
+    if (!threadlist_initialized){
+        threadlist* head = calloc(1, sizeof(threadlist));
+        head->qemuthread = calloc(1, sizeof(QemuThread));
+        head->qemuthread->wrapper.pth_thread = pth_self();
+        threadlist_initialized = true;
+        memset(&head->qemuthread->wrapper.rcu_reader, 0, sizeof(struct rcu_reader_data));
+        head->qemuthread->wrapper.thread_name = strdup("main");
+        QLIST_INSERT_HEAD(&pth_wrappers, head, next);
+        threadlist_size++;
 
-    while(tmp)
-    {
-        if (tmp->t->thread.pth_thread == p)
-        {
-            *t = tmp->t;
-            break;
-        }
-        tmp = tmp->next;
     }
 }
-
-void  get_threadlist_head(  threadlist ** h)
-{
-    *h = head;
-}
-
-bool nodeExists(QemuThread** t)
-{
-     threadlist * tmp = head;
-
-    while(tmp)
-    {
-        if (tmp->t == *t)
-        {
-            return true;
-        }
-        tmp = tmp->next;
-    }
-    return false;
-}
-#include <pth.h>
-void initThreadList(void)
-{
-        if (! threalist_initialized)
-        {
-            QemuThread* q;
-            q = calloc(1, sizeof(QemuThread));
-            q->thread.pth_thread = pth_self();
-
-            current = calloc(1, sizeof( threadlist));
-            current->t = q;
-            current->sz = 1;
-
-            current->t->thread.rcu_reader = NULL;
-            current->t->thread.current_cpu = NULL;
-            current->t->thread.leader = NULL;
-#ifdef CONFIG_LINUX_USER
-            current->t->thread.mmap_lock_count = 0;
-#endif
-            head = current;
-
-            threalist_initialized = true;
-        }
-}
-
 
 void qemu_thread_create(QemuThread *thread, const char *name,
                        void *(*start_routine)(void*),
@@ -541,27 +496,14 @@ void qemu_thread_create(QemuThread *thread, const char *name,
 
     /***********************************************/
     // THREAD LIST
-    initThreadList();
+    initMainThread();
 
-    QemuThread* t= NULL;
-    if (!nodeExists(&t))
-    {
-        tmp = calloc(1, sizeof( threadlist));
-        tmp->t = thread;
-        tmp->t->thread.rcu_reader = NULL;
-        tmp->t->thread.current_cpu = NULL;
-        tmp->t->thread.leader = NULL;
-#ifdef CONFIG_LINUX_USER
-        tmp->t->thread.mmap_lock_count = 0;
-#endif
-       // tmp->t->thread.my_iothread = NULL;
-        head->sz++;
-
-        (*current).next = tmp;
-
-        current = tmp;
-
-    }
+    threadlist* head = calloc(1, sizeof(threadlist));
+    head->qemuthread = thread;
+    head->qemuthread->wrapper.thread_name = strdup(name);
+    memset(&head->qemuthread->wrapper.rcu_reader, 0, sizeof(struct rcu_reader_data));
+    threadlist_size++;
+    QLIST_INSERT_HEAD(&pth_wrappers, head, next);
     /***********************************************/
 
     if (name_threads) {
@@ -575,11 +517,11 @@ void qemu_thread_create(QemuThread *thread, const char *name,
         }
     }
 
-    err = pthpthread_create(&thread->thread.pth_thread, &attr, start_routine, arg);
+    err = pthpthread_create(&thread->wrapper.pth_thread, &attr, start_routine, arg);
     if (err)
         error_exit(err, __func__);
 
-    pth_yield(NULL);
+    PTH_YIELD
 
     pthpthread_sigmask(SIG_SETMASK, &oldset, NULL);
 
@@ -588,12 +530,12 @@ void qemu_thread_create(QemuThread *thread, const char *name,
 
 void qemu_thread_get_self(QemuThread *thread)
 {
-    thread->thread.pth_thread = pthpthread_self();
+    thread->wrapper.pth_thread = pthpthread_self();
 }
 
 bool qemu_thread_is_self(QemuThread *thread)
 {
-   return pthpthread_equal(pthpthread_self(), thread->thread.pth_thread);
+   return pthpthread_equal(pthpthread_self(), thread->wrapper.pth_thread);
 }
 
 void qemu_thread_exit(void *retval)
@@ -606,7 +548,7 @@ void *qemu_thread_join(QemuThread *thread)
     int err;
     void *ret;
 
-    err = pthpthread_join(thread->thread.pth_thread, &ret);
+    err = pthpthread_join(thread->wrapper.pth_thread, &ret);
     if (err) {
         error_exit(err, __func__);
     }
@@ -615,12 +557,14 @@ void *qemu_thread_join(QemuThread *thread)
 
 
 
-//-------------------------------------------------
-pth_wrapper* getWrapper(void)
-{
-    QemuThread * t = NULL;
-    get_current_thread(&t);
-    return &t->thread;
+pth_wrapper* pth_get_wrapper(void){
+    threadlist * entry = NULL;
+    QLIST_FOREACH(entry, &pth_wrappers, next){
+        if (entry->qemuthread->wrapper.pth_thread == pth_self())
+            return &entry->qemuthread->wrapper;
+    }
+
+    assert(false && "pth: thread was none added to pth thread list! did you use function attributes? if yes, they are not supported.");
 }
 
 
