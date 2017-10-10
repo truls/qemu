@@ -52,6 +52,11 @@
 #include "sysemu/replay.h"
 #include "hw/boards.h"
 
+#ifdef CONFIG_FLEXUS
+#include "../libqflex/flexus_proxy.h"
+extern int timing_mode;
+#endif
+
 #ifdef CONFIG_LINUX
 
 #include <sys/prctl.h>
@@ -2046,3 +2051,40 @@ void dump_drift_info(FILE *f, fprintf_function cpu_fprintf)
         cpu_fprintf(f, "Max guest advance   NA\n");
     }
 }
+#if defined (CONFIG_FLEXUS)
+//NOOSHIN: test begin
+int get_info(void *opaque){
+  CPUState* cpu = (CPUState*)opaque;
+
+  int r = 0;
+  printf("QEMU: in get_info\n");
+
+  /* Account partial waits to QEMU_CLOCK_VIRTUAL.  */
+    qemu_account_warp_timer();
+
+    qemu_clock_enable(QEMU_CLOCK_VIRTUAL,
+                          (cpu->singlestep_enabled & SSTEP_NOTIMER) == 0);
+
+    if (cpu_can_run(cpu)) {
+        r = tcg_cpu_exec(cpu);
+        if (r == EXCP_DEBUG) {
+            cpu_handle_guest_debug(cpu);
+
+        }
+    }
+    /* Pairs with smp_wmb in qemu_cpu_kick.  */
+   // atomic_mb_set(&exit_request, 0);
+
+    if (use_icount) {
+        int64_t deadline = qemu_clock_deadline_ns_all(QEMU_CLOCK_VIRTUAL);
+
+        if (deadline == 0) {
+            qemu_clock_notify(QEMU_CLOCK_VIRTUAL);
+        }
+    }
+    qemu_tcg_wait_io_event(QTAILQ_FIRST(&cpus));
+
+    return 0;
+}
+//NOOSHIN: test end
+#endif
