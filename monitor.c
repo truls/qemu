@@ -1982,18 +1982,15 @@ static void hmp_loadvm_ext(Monitor *mon, const QDict *qdict)
     int saved_vm_running  = runstate_is_running();
     const char *name = qdict_get_str(qdict, "name");
 
-    vm_stop(RUN_STATE_RESTORE_VM);
-
-    if (load_vmstate(name) == 0 && saved_vm_running) {
-        vm_start();
-    }
-}
-    const char *name = qdict_get_str(qdict, "name");
     if (exton == false) {
 	monitor_printf(mon, "Error: external snapshot subsystem was disabled\n");
         return;
     }
-    if(incremental_load_vmstate_ext(name, mon) < 0) {
+
+    vm_stop(RUN_STATE_RESTORE_VM);
+
+    if (incremental_load_vmstate_ext(name, mon) < 0 && saved_vm_running) {
+        vm_start();
 	monitor_printf(mon, "Error: can't load the snapshot with args: %s\n", name);
     }
 }

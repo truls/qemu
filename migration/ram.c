@@ -2061,16 +2061,15 @@ static int ram_state_init(RAMState **rsp)
     /* Skip setting bitmap if there is no RAM */
     if (ram_bytes_total()) {
         RAMBlock *block;
-#ifdef CONFIG_EXTSNAP
-        bitmap_clear(rs->ram_bitmap->bmap, 0, ram_bitmap_pages);
-#else
-#endif
-
         QLIST_FOREACH_RCU(block, &ram_list.blocks, next) {
             unsigned long pages = block->max_length >> TARGET_PAGE_BITS;
 
             block->bmap = bitmap_new(pages);
+#ifdef CONFIG_EXTSNAP
+            bitmap_clear(block->bmap, 0, pages);
+#else
             bitmap_set(block->bmap, 0, pages);
+#endif
             if (migrate_postcopy_ram()) {
                 block->unsentmap = bitmap_new(pages);
                 bitmap_set(block->unsentmap, 0, pages);
@@ -2092,7 +2091,7 @@ static int ram_state_init(RAMState **rsp)
      * it tries to save empty snapshot,
      * so we should prevent such behavior.
      */
-    if (rs->migration_dirty_pages == (ram_bytes_total() >> TARGET_PAGE_BITS)){
+    if ((*rsp)->migration_dirty_pages == (ram_bytes_total() >> TARGET_PAGE_BITS)) {
         error_report("Empty snapshot cannot be saved!\n");
         qemu_mutex_unlock_ramlist();
         qemu_mutex_unlock_iothread();
@@ -2774,10 +2773,10 @@ static int ram_load(QEMUFile *f, void *opaque, int version_id)
                 ret = -EINVAL;
                 break;
             }
-            trace_ram_load_loop(block->idstr, (uint64_t)addr, flags, host);
 #ifdef CONFIG_EXTSNAP
             ram_list_clean(addr, block->used_length);
 #endif
+            trace_ram_load_loop(block->idstr, (uint64_t)addr, flags, host);
         }
 
         switch (flags & ~RAM_SAVE_FLAG_CONTINUE) {

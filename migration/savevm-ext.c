@@ -44,6 +44,7 @@
 #include "audio/audio.h"
 #include "migration/migration.h"
 #include "migration/postcopy-ram.h"
+#include "migration/global_state.h"
 #include "qemu/error-report.h"
 #include "qemu/sockets.h"
 #include "qemu/queue.h"
@@ -51,6 +52,7 @@
 #include "exec/memory.h"
 #include "qmp-commands.h"
 #include "trace.h"
+#include "savevm.h"
 #include "qemu/bitops.h"
 #include "qemu/iov.h"
 #include "block/snapshot.h"
@@ -58,6 +60,8 @@
 #include "qemu/cutils.h"
 #include "io/channel-buffer.h"
 #include "io/channel-file.h"
+#include "qemu-file-channel.h"
+#include "qemu-file.h"
 
 const char *input_command = "gunzip -c";
 const char *output_command = "gzip -c";
@@ -65,11 +69,7 @@ const char *output_command = "gzip -c";
 static int qemu_savevm_state(QEMUFile *f, Error **errp)
 {
     int ret;
-    MigrationParams params = {
-        .blk = 0,
-        .shared = 0
-    };
-    MigrationState *ms = migrate_init(&params);
+    MigrationState *ms = migrate_init();
     MigrationStatus status;
     ms->to_dst_file = f;
 
@@ -78,9 +78,15 @@ static int qemu_savevm_state(QEMUFile *f, Error **errp)
         goto done;
     }
 
+    if (migrate_use_block()) {
+        error_setg(errp, "Saving vm and internal snapshots are incompatible");
+        ret = -EINVAL;
+        goto done;
+    }
+
     qemu_mutex_unlock_iothread();
     qemu_savevm_state_header(f);
-    qemu_savevm_state_begin(f, &params);
+    qemu_savevm_state_setup(f);
     qemu_mutex_lock_iothread();
 
     while (qemu_file_get_error(f) == 0) {
@@ -91,7 +97,7 @@ static int qemu_savevm_state(QEMUFile *f, Error **errp)
 
     ret = qemu_file_get_error(f);
     if (ret == 0) {
-        qemu_savevm_state_complete_precopy(f, false);
+        qemu_savevm_state_complete_precopy(f, false, false);
         ret = qemu_file_get_error(f);
     }
     qemu_savevm_state_cleanup();
@@ -481,13 +487,14 @@ static int load_state_ext(const char *name)
     mis->from_src_file = f;
 
     ret = qemu_loadvm_state(f);
-    qemu_fclose(f);
 
     migration_incoming_state_destroy();
     if (ret < 0) {
         error_report("Error %d while loading vm state", ret);
         return ret;
     }
+  
+    return 0;
 end:
     QDECREF(dir_path);
     return ret;
