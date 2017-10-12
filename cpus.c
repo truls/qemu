@@ -54,6 +54,7 @@
 
 #ifdef CONFIG_FLEXUS
 #include "../libqflex/flexus_proxy.h"
+#include "../libqflex/api.h"
 extern int timing_mode;
 #endif
 
@@ -1280,6 +1281,12 @@ static int tcg_cpu_exec(CPUState *cpu)
 #endif
     return ret;
 }
+#ifdef CONFIG_FLEXUS
+void advance_qemu(void){
+    tcg_cpu_exec(current_cpu);
+
+}
+#endif
 
 /* Destroy any remaining vCPUs which have been unplugged and have
  * finished running
@@ -1340,7 +1347,13 @@ static void *qemu_tcg_rr_cpu_thread_fn(void *arg)
 
     /* process any pending work */
     cpu->exit_request = 1;
-
+#ifdef CONFIG_FLEXUS
+    if (timing_mode){
+        printf("QEMU: Starting timing simulation. Passing control to Flexus.\n");
+        simulator_start();
+        return NULL;
+    }
+#endif
     while (1) {
         /* Account partial waits to QEMU_CLOCK_VIRTUAL.  */
         qemu_account_warp_timer();

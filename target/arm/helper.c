@@ -18,9 +18,11 @@
 
 #if defined(CONFIG_FLEXUS)
 #include "../libqflex/api.h"
-//#include "exec/memory.h"
-//#include "exec/address-spaces.h"
-//#include "exec/cpu_ldst.h"
+
+void cpu_write_register( void *env_ptr, int reg_index, unsigned *reg_size, uint64_t value ) {
+    assert(false);
+}
+
 #endif
 
 #define ARM_CPU_FREQ 1000000000 /* FIXME: 1 GHz, should be configurable */
@@ -11131,7 +11133,6 @@ uint32_t HELPER(crc32c)(uint32_t acc, uint32_t val, uint32_t bytes)
     return crc32c(acc, buf, bytes) ^ 0xffffffff;
 }
 #ifdef CONFIG_FLEXUS
-#include <string.h>
 
 /* cached variables */
 conf_object_t space_cached;
