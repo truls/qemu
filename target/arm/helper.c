@@ -11387,14 +11387,31 @@ uint64_t cpu_get_program_counter(void *cs_) {
 
 physical_address_t mmu_logical_to_physical(void *cs_, logical_address_t va) {
   CPUState *cs = (CPUState*)cs_;
-  physical_address_t pa = cpu_get_phys_page_debug(cs, (va & TARGET_PAGE_MASK));
+  physical_address_t pa = cpu_get_phys_page_debug(cs, va);
+
+  hwaddr phys_addr;
+  target_ulong page_size;
+  int prot;
+  uint32_t fsr;
+  bool ret;
+  uint64_t par64;
+  MemTxAttrs attrs = {};
+  ARMMMUFaultInfo fi = {};
+
+   MMUAccessType access_type = MMU_INST_FETCH;
+  ARMMMUIdx mmu_idx = ARMMMUIdx_S1E3;
+
+
+  ret = get_phys_addr(cs->env_ptr, va, access_type, mmu_idx,
+                      &phys_addr, &attrs, &prot, &page_size, &fsr, &fi);
+
 
   if( pa != - 1 ) {
     // assuming phys address and logical address are the right size
     // this gets the page then we need to do get the place in the page using va
     // logical_address_t mask = 0x0000000000000FFF; 
     // The offset  seems to be 12bits for 32bit or 64bit addresses
-    pa = pa + (va & ~TARGET_PAGE_MASK);
+   // pa = pa + (va & ~TARGET_PAGE_MASK);
     return pa;
   } else {
     return -1;
