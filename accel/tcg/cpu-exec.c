@@ -36,6 +36,14 @@
 #include "sysemu/cpus.h"
 #include "sysemu/replay.h"
 
+#ifdef CONFIG_QUANTUM
+#define QUANTUM_LIMIT \
+    !cpu->hasReachedInstrLimit
+
+#else // CONFIG_QUANTUM
+#define QUANTUM_LIMIT 1
+#endif
+
 /* -icount align implementation. */
 
 typedef struct SyncClocks {
@@ -702,12 +710,12 @@ int cpu_exec(CPUState *cpu)
     }
 
     /* if an exception is pending, we execute it here */
-    while (!cpu_handle_exception(cpu, &ret)) {
+    while (!cpu_handle_exception(cpu, &ret)&& QUANTUM_LIMIT) {
         TranslationBlock *last_tb = NULL;
         int tb_exit = 0;
 
-        while (!cpu_handle_interrupt(cpu, &last_tb)) {
-            TranslationBlock *tb = tb_find(cpu, last_tb, tb_exit);
+        while (!cpu_handle_interrupt(cpu, &last_tb)&& QUANTUM_LIMIT) {
+	    TranslationBlock *tb = tb_find(cpu, last_tb, tb_exit);
             cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);
             /* Try to align the host and virtual clocks
                if the guest is in advance */

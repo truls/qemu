@@ -91,6 +91,24 @@ void qemu_remove_exit_notifier(Notifier *notify);
 void qemu_add_machine_init_done_notifier(Notifier *notify);
 void qemu_remove_machine_init_done_notifier(Notifier *notify);
 
+#ifdef CONFIG_QUANTUM
+uint64_t* increment_total_num_instr(void);
+uint64_t* query_total_num_instr(void);
+uint64_t* query_quantum_core_value(void);
+uint64_t* query_quantum_record_value(void);
+uint64_t* query_quantum_step_value(void);
+uint64_t* query_quantum_node_value(void);
+
+const char* query_quantum_file_value(void);
+void set_quantum_value(uint64_t val);
+void set_quantum_record_value(uint64_t val);
+void set_quantum_node_value(uint64_t val);
+void cpu_dbg(DbgDataAll *info);
+void cpu_zero_all(void);
+void configure_quantum(QemuOpts *opts, Error **errp);
+void processForOpts(uint64_t *val, const char* qopt, Error **errp);
+void processLetterforExponent(uint64_t *val, char c, Error **errp);
+#endif
 void qemu_announce_self(void);
 
 extern int autostart;
