@@ -1160,6 +1160,15 @@
 { 'command': 'cpu-zero-all' }
 
 ##
+# @quantum-save:
+#
+# save after core quantum
+#
+# Since: 2.10 - PARSALAB
+##
+{ 'command': 'quantum-save' }
+
+##
 # @memsave:
 #
 # Save a portion of guest memory to a file.

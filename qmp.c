@@ -172,6 +172,14 @@ void qmp_cpu_zero_all(Error **errp)
     cpu_zero_all();
 #endif
 }
+
+void qmp_quantum_save(Error **errp)
+{
+#ifdef CONFIG_QUANTUM
+    set_quantum_save_state(true);
+#endif
+}
+
 #ifndef CONFIG_VNC
 /* If VNC support is enabled, the "true" query-vnc command is
    defined in the VNC subsystem */

@@ -58,6 +58,7 @@ typedef struct {
     uint64_t quantum_value, quantum_record_value, quantum_node_value,quantum_step_value;
     char* quantum_file_value;
     uint64_t total_num_instructions, last_num_instruction;
+    bool quantum_save;
 } quantum_state_t;
 
 static quantum_state_t quantum_state;
@@ -1364,14 +1365,28 @@ static void process_icount_data(CPUState *cpu)
     }
 }
 #ifdef CONFIG_QUANTUM
+bool query_quantum_save_state(void)
+{
+    return quantum_state.quantum_save;
+}
+
+void set_quantum_save_state(bool state)
+{
+    quantum_state.quantum_save = state;
+}
+
 uint64_t* increment_total_num_instr(void)
 {
       quantum_state.total_num_instructions++;
       return &(quantum_state.total_num_instructions);
 }
-uint64_t* query_total_num_instr(void)
+uint64_t query_total_num_instr(void)
 {
-    return (uint64_t*) &quantum_state.total_num_instructions;
+    return quantum_state.total_num_instructions;
+}
+void set_total_num_instr(uint64_t val)
+{
+    quantum_state.total_num_instructions = val;
 }
 uint64_t* query_quantum_core_value(void)
 {

@@ -92,8 +92,11 @@ void qemu_add_machine_init_done_notifier(Notifier *notify);
 void qemu_remove_machine_init_done_notifier(Notifier *notify);
 
 #ifdef CONFIG_QUANTUM
+void set_quantum_save_state(bool state);
+bool query_quantum_save_state(void);
 uint64_t* increment_total_num_instr(void);
-uint64_t* query_total_num_instr(void);
+uint64_t query_total_num_instr(void);
+void set_total_num_instr(uint64_t val);
 uint64_t* query_quantum_core_value(void);
 uint64_t* query_quantum_record_value(void);
 uint64_t* query_quantum_step_value(void);

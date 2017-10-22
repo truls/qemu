@@ -1327,6 +1327,8 @@ void hmp_savevm(Monitor *mon, const QDict *qdict)
 
     save_snapshot(qdict_get_try_str(qdict, "name"), &err);
     hmp_handle_error(mon, &err);
+    if (query_quantum_save_state())
+        set_quantum_save_state(false);
 }
 
 void hmp_delvm(Monitor *mon, const QDict *qdict)
@@ -2226,6 +2228,13 @@ void hmp_cpu_add(Monitor *mon, const QDict *qdict)
     hmp_handle_error(mon, &err);
 }
 #ifdef CONFIG_QUANTUM
+void hmp_quantum_save(Monitor *mon, const QDict *qdict)
+{
+    Error *err = NULL;
+    qmp_quantum_save(&err);
+    hmp_handle_error(mon, &err);
+}
+
 void hmp_quantum_get(Monitor *mon, const QDict *qdict)
 {
     Error *err = NULL;

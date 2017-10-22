@@ -1836,6 +1836,19 @@ STEXI
 @item cpu-sq @var{var}
 @findex cpu set quantum
 Set Quantum value for all CPUs @var{var}
+ETEXI
+    {
+        .name       = "quantum-save",
+        .args_type  = "",
+        .params     = "",
+        .help       = "quantum-save",
+        .cmd  = hmp_quantum_save,
+    },
+
+STEXI
+@item quantum-save
+@findex quantum save
+activate saving on quantum
 
 ETEXI
 

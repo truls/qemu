@@ -92,7 +92,11 @@ void helper_quantum(CPUARMState *env)
         }
         if (*qn > 0){
             if (*tni % *qn== 0){
-                raise(SIGSTOP);
+                if (query_quantum_save_state()){
+                    vm_stop(RUN_STATE_PAUSED);
+                }else{
+                    raise(SIGSTOP);
+                }
             }
         }
     } else {
