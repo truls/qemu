@@ -36,6 +36,12 @@
 #include "sysemu/cpus.h"
 #include "sysemu/replay.h"
 
+#ifdef CONFIG_FLEXUS
+#define FLEXUS(VAR) VAR
+#else
+#define FLEXUS()
+#endif
+
 /* -icount align implementation. */
 
 typedef struct SyncClocks {
