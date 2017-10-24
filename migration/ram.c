@@ -2777,6 +2777,9 @@ static int ram_load(QEMUFile *f, void *opaque, int version_id)
             ram_list_clean(addr, block->used_length);
 #endif
             trace_ram_load_loop(block->idstr, (uint64_t)addr, flags, host);
+#ifdef CONFIG_EXTSNAP
+            ram_list_clean(addr, block->used_length);
+#endif
         }
 
         switch (flags & ~RAM_SAVE_FLAG_CONTINUE) {

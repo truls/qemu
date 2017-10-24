@@ -4910,12 +4910,6 @@ int main(int argc, char **argv, char **envp)
     }
 #endif
 
-#ifdef CONFIG_MULTINODE
-    if (multinode_opts) {
-        configure_multinode(multinode_opts, &error_abort);
-    }
-#endif
-
     qdev_prop_check_globals();
     if (vmstate_dump_file) {
         /* dump and exit */
