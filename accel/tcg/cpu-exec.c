@@ -39,21 +39,13 @@
 #ifdef CONFIG_PTH
 #define LOOP_LIMIT 5000
 static int sloop;
-static bool sbool = false;
-#define CHECK_LOOP(cpu) \
-    if (++sloop >= LOOP_LIMIT){ \
-        sbool = true; \
-        qemu_cpu_kick(cpu); \
-    }
-#define CHECK_EXIT \
-    if (sbool){ \
-        sbool = false; \
-        break; \
-    } \
-    sloop = 0;
+#define INIT_LOOP sloop = 0;
+#define CHECK_LOOP !(sloop > LOOP_LIMIT)
+#define INCR_LOOP sloop++;
 #else
-#define CHECK_LOOP(cpu)
-#define CHECK_EXIT
+#define INIT_LOOP()
+#define CHECK_LOOP
+#define INCR_LOOP()
 #endif
 
 /* -icount align implementation. */
@@ -722,14 +714,15 @@ int cpu_exec(CPUState *cpu)
         }
     }
 
+    INIT_LOOP
     /* if an exception is pending, we execute it here */
-    while (!cpu_handle_exception(cpu, &ret)) {
+    while (!cpu_handle_exception(cpu, &ret) && CHECK_LOOP) {
         TranslationBlock *last_tb = NULL;
         int tb_exit = 0;
-        CHECK_EXIT
 
-        while (!cpu_handle_interrupt(cpu, &last_tb)) {
-            CHECK_LOOP(cpu)
+        while (!cpu_handle_interrupt(cpu, &last_tb) && CHECK_LOOP) {
+            INCR_LOOP
+
             TranslationBlock *tb = tb_find(cpu, last_tb, tb_exit);
             cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);
             /* Try to align the host and virtual clocks
