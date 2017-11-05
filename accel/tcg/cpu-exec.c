@@ -36,18 +36,6 @@
 #include "sysemu/cpus.h"
 #include "sysemu/replay.h"
 
-#ifdef CONFIG_PTH
-#define LOOP_LIMIT 5000
-static int sloop;
-#define INIT_LOOP sloop = 0;
-#define CHECK_LOOP !(sloop > LOOP_LIMIT)
-#define INCR_LOOP sloop++;
-#else
-#define INIT_LOOP()
-#define CHECK_LOOP
-#define INCR_LOOP()
-#endif
-
 /* -icount align implementation. */
 
 typedef struct SyncClocks {
@@ -714,14 +702,12 @@ int cpu_exec(CPUState *cpu)
         }
     }
 
-    INIT_LOOP
     /* if an exception is pending, we execute it here */
-    while (!cpu_handle_exception(cpu, &ret) && CHECK_LOOP) {
+    while (!cpu_handle_exception(cpu, &ret)) {
         TranslationBlock *last_tb = NULL;
         int tb_exit = 0;
 
-        while (!cpu_handle_interrupt(cpu, &last_tb) && CHECK_LOOP) {
-            INCR_LOOP
+        while (!cpu_handle_interrupt(cpu, &last_tb)) {
 
             TranslationBlock *tb = tb_find(cpu, last_tb, tb_exit);
             cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);
