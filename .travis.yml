@@ -65,11 +65,11 @@ script:
   - make ${MAKEFLAGS} && ${TEST_CMD}
 matrix:
   include:
-    - env: CONFIG="--enable-pth"
+    - env: CONFIG="--enable-pth --extra-cflags=-I/home/travis/build/parsa-epfl/qemu/pth --extra-ldflags=-L/home/travis/build/parsa-epfl/qemu/pth"
       compiler: gcc
       before_install:
         - git clone  https://github.com/parsa-epfl/pth.git
-        - cd pth && ./configure --with-pic && make ${MAKEFLAGS} && make test && make install
+        - cd pth && ./configure --with-pic && make ${MAKEFLAGS} && make test
     # Test with CLang for compile portability
     - env: CONFIG=""
       compiler: clang
