@@ -81,7 +81,11 @@ usage() {
 check_invoke_script() {
     if [ -e "$1" ]; then
         if [ ! -z "$2" ]; then
-            source "$1" "$2"
+            if [ ! -z "$3" ]; then
+                source "$1" "$2" "$3"
+            else
+                source "$1" "$2"
+            fi
         else
             source "$1"
         fi
@@ -132,6 +136,8 @@ check_run_instance() {
         if [ ! -f $DIR/${USER_FILE} ]; then
             printf "$0:$LINENO: $ERROR_PRINT $DIR/$USER_FILE does not exist!\n"
             exit 1
+        else
+            source $DIR/${USER_FILE}
         fi
 
         # Create a log folder for the instance to hold Flexus logs
@@ -278,8 +284,7 @@ if [ "$TYPE" = "single" ]; then
             echo -e " *** Removing Snapshot ***\n" >> $LOG
             echo -e "\nRemoving Snapshot $SNAPSHOT_NAME"
             # FIXME: to be updated when the new snapshot mechanism is ready (delvm testing)
-            cp $DEP_FILE $DIR/$LOG_NAME/Qemu_0/
-            check_invoke_script $DIR/helpers/remove_ext_snapshot.sh $SNAPSHOT_NAME >> $LOG
+            check_invoke_script $DIR/helpers/remove_ext_snapshot.sh $SNAPSHOT_NAME "${IMG_0}" >> $LOG
             check_error $? "Snapshot Removed" "Error Removing Snapshot"
         else
             echo -e " *** Taking Snapshot ***\n" >> $LOG
@@ -345,7 +350,7 @@ else
             if [ ! -z "$REMOVE_SNAPSHOT" ]; then
                 echo -e " *** Removing Snapshot ***\n" >> $LOG
                 echo -e "\nRemoving Snapshot ${SNAPSHOT_NAME}-${i}"
-                check_invoke_script $DIR/helpers/remove_ext_snapshot.sh ${SNAPSHOT_NAME}-${i} >> $LOG
+                check_invoke_script $DIR/helpers/remove_ext_snapshot.sh ${SNAPSHOT_NAME}-${i} ${IMG_0} >> $LOG
                 check_error $? "Snapshot Removed" "Error Removing Snapshot"
             else
                 echo -e " *** Taking Snapshot ***\n" >> $LOG
