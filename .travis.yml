@@ -68,7 +68,7 @@ matrix:
     - env: CONFIG="--enable-pth"
       compiler: gcc
       before_install:
-        - git clone  git@github.com:parsa-epfl/pth.git
+        - git clone  https://github.com/parsa-epfl/pth.git
         - cd pth && ./configure --with-pic && make ${MAKEFLAGS} && make test && make install
     # Test with CLang for compile portability
     - env: CONFIG=""
