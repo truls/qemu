@@ -72,7 +72,8 @@ class Snapshot(object):
     def delete(self):
         if self.name == '':
             return
-        rm_cmd = " ".join(['rm -rf', base_dir, self.name])
+        filename = os.path.join(base_dir, self.name);
+        rm_cmd = " ".join(['rm -rf', filename])
         print rm_cmd # Its untested properly, if you want delete just copy and execute it
 
     def compress(self, out):
