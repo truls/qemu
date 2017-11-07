@@ -1979,7 +1979,6 @@ void qmp_closefd(const char *fdname, Error **errp)
 #ifdef CONFIG_EXTSNAP
 static void hmp_loadvm_ext(Monitor *mon, const QDict *qdict)
 {
-    int saved_vm_running  = runstate_is_running();
     const char *name = qdict_get_str(qdict, "name");
 
     if (exton == false) {
@@ -1987,10 +1986,7 @@ static void hmp_loadvm_ext(Monitor *mon, const QDict *qdict)
         return;
     }
 
-    vm_stop(RUN_STATE_RESTORE_VM);
-
-    if (incremental_load_vmstate_ext(name, mon) < 0 && saved_vm_running) {
-        vm_start();
+    if (incremental_load_vmstate_ext(name, mon) < 0) {
 	monitor_printf(mon, "Error: can't load the snapshot with args: %s\n", name);
     }
 }
