@@ -42,11 +42,22 @@
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.#
 
 TIMEOUT="10"
+IMAGE=$2
 SNAP_NAME=$1
+SNAP_PATH="$( dirname $IMAGE )""$SNAP_NAME"
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+MANAGER=$DIR/../snap-manager
 
 /usr/bin/expect <<EOD
 set timeout $TIMEOUT
-spawn rm -rf $SNAP_NAME
+spawn $MANAGER delete $IMAGE $SNAP_NAME
+
+expect {
+  timeout { send_user "\nFailed to remove snapshot\n"; exit 1 }
+  "rm -rf $SNAP_PATH"
+}
+
+spawn sh -c "`$MANAGER delete $IMAGE $SNAP_NAME`"
 
 expect {
   timeout { send_user "\nFailed to remove snapshot\n"; exit 1 }
