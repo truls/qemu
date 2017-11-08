@@ -55,7 +55,7 @@
 #ifdef CONFIG_FLEXUS
 #include "../libqflex/flexus_proxy.h"
 #include "../libqflex/api.h"
-extern int timing_mode;
+extern bool timing_mode;
 #endif
 
 #ifdef CONFIG_LINUX

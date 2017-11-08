@@ -32,7 +32,7 @@
 #include "../libqflex/flexus_proxy.h"
 
 char* sim_path = NULL;
-int timing_mode = 0;
+bool timing_mode = false;
 extern int flexus_is_simulating;
 extern int64_t flexus_simulation_length;
 #endif 
@@ -3775,7 +3775,7 @@ int main(int argc, char **argv, char **envp)
           strcpy(sim_path, optarg);
           break;
         case QEMU_OPTION_timing:
-          timing_mode = 1;
+          timing_mode = true;
           break;
         case QEMU_OPTION_startsimulation:
           flexus_is_simulating = 1;

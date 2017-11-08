@@ -37,9 +37,36 @@
 #include "sysemu/replay.h"
 
 #ifdef CONFIG_FLEXUS
-#define FLEXUS(VAR) VAR
+extern bool timing_mode;
+static bool timing_once = false;
+
+static bool check_timing_loop_limit(void)
+{
+    if (timing_mode)
+        return timing_once;
+    else
+        return false;
+}
+
+#define FLEXUS_TIMING_LOOP_CHECK() \
+        !check_timing_loop_limit()
+
+#define FLEXUS_TIMING_LOOP_INIT() \
+    do{                           \
+        if (timing_mode)          \
+            timing_once = false;  \
+    }while(0)                     \
+
+#define FLEXUS_TIMING_LOOP_FLIP() \
+    do{                           \
+        if (timing_mode)          \
+            timing_once = true;   \
+    }while(0)                     \
+
 #else
-#define FLEXUS()
+#define FLEXUS_TIMING_LOOP_CHECK() 1
+#define FLEXUS_TIMING_LOOP_FLIP()
+#define FLEXUS_TIMING_LOOP_INIT()
 #endif
 
 /* -icount align implementation. */
@@ -706,21 +733,21 @@ int cpu_exec(CPUState *cpu)
             qemu_mutex_unlock_iothread();
         }
     }
-    FLEXUS(bool once = false;)
+    FLEXUS_TIMING_LOOP_INIT();
     /* if an exception is pending, we execute it here */
-    while (!cpu_handle_exception(cpu, &ret)&& FLEXUS(!once)) {
+    while (!cpu_handle_exception(cpu, &ret)&& FLEXUS_TIMING_LOOP_CHECK()) {
         TranslationBlock *last_tb = NULL;
         int tb_exit = 0;
 
 
 
-        while (!cpu_handle_interrupt(cpu, &last_tb) && FLEXUS(!once)) {
+        while (!cpu_handle_interrupt(cpu, &last_tb) && FLEXUS_TIMING_LOOP_CHECK()) {
             TranslationBlock *tb = tb_find(cpu, last_tb, tb_exit);
             cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);
             /* Try to align the host and virtual clocks
                if the guest is in advance */
             align_clocks(&sc, cpu);
-            FLEXUS(once = true;)
+            FLEXUS_TIMING_LOOP_FLIP();
         }
     }
 
