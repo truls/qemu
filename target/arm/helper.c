@@ -11374,6 +11374,14 @@ void cpu_pop_indexes(int *indexes) {
 	}
 }
 
+uint32_t  cpu_get_instruction(void *cs, uint64_t* addr)
+{
+    CPUState *cpu = (CPUState*)cs;
+    CPUARMState *env = cpu->env_ptr;
+
+    return cpu_ldl_code(env, *addr);
+}
+
 uint64_t cpu_get_program_counter(void *cs_) {
   CPUState *cs = (CPUState*)cs_;
   CPUARMState *env_ptr = cs->env_ptr;
@@ -11393,8 +11401,6 @@ physical_address_t mmu_logical_to_physical(void *cs_, logical_address_t va) {
   target_ulong page_size;
   int prot;
   uint32_t fsr;
-  bool ret;
-  uint64_t par64;
   MemTxAttrs attrs = {};
   ARMMMUFaultInfo fi = {};
 
@@ -11402,7 +11408,7 @@ physical_address_t mmu_logical_to_physical(void *cs_, logical_address_t va) {
   ARMMMUIdx mmu_idx = ARMMMUIdx_S1E3;
 
 
-  ret = get_phys_addr(cs->env_ptr, va, access_type, mmu_idx,
+  bool ret = get_phys_addr(cs->env_ptr, va, access_type, mmu_idx,
                       &phys_addr, &attrs, &prot, &page_size, &fsr, &fi);
 
 
@@ -11455,9 +11461,11 @@ uint64_t readReg(void *cs_, int reg_idx, int reg_type) {
     case SYSTEM:
         return env->elr_el[reg_idx];
         break;
-//    case ASID:
-  //      break;
-
+    case FPCR:
+        return vfp_get_fpsr(env);
+        break;
+    case FPSR:
+        return vfp_get_fpcr(env);
     default:
         assert(false);
         break;
