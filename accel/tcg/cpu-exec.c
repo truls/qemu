@@ -48,16 +48,18 @@ static int iExit;
             break; \
         }
 #define CHECK_LOOP(cpu, limit) \
+    if (limit > 0) {\
         if (++iExit > limit) {\
             iExit = 0; \
             bExit = true; \
             qemu_cpu_kick(cpu); \
-        }
+        }}
 #define TB_CMP(tb, last_tb) \
 	if (tb == last_tb){ \
                 PTH_YIELD \
             }
 #else
+#define INIT_LOOP
 #define CHECK_EXIT 
 #define CHECK_LOOP(cpu, limit) 
 #define TB_CMP(tb, last_tb) 
