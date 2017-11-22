@@ -420,6 +420,10 @@ bogus_os="no"
 #**************************
 #quantum support
 quantum="no"
+# gnu pth support
+pth="no"
+#external snapshot support
+extsnap=""
 #**************************
 #PARSA END
 #**************************
@@ -933,13 +937,20 @@ for opt do
     # configure to be used by RPM and similar macros that set
     # lots of directory switches by default.
   ;;
-
 #**************************
 #PARSA START
 #**************************
   --disable-quantum) quantum="no"
   ;;
   --enable-quantum) quantum="yes"
+  ;;
+  --disable-pth) pth="no"
+  ;;
+  --enable-pth) pth="yes"
+;;
+  --disable-extsnap) extsnap="no"
+  ;;
+  --enable-extsnap) extsnap="yes"
   ;;
 #**************************
 #PARSA END
@@ -1556,6 +1567,8 @@ disabled with --disable-FEATURE, default is enabled if available:
   #**************************
   #PARSA START
   #**************************
+  GNU Pth         support for GNU Pth - The GNU Portable Threads
+  extsnap         external snapshots support
   Quantum	      support for quantum value - no MTTCG at the moment
   #**************************
   #PARSA END
@@ -5266,6 +5279,14 @@ fi
 if test "$quantum" = "yes" ; then
 QEMU_CFLAGS="-DCONFIG_QUANTUM $QEMU_CFLAGS"
 fi
+if test "$pth" = "yes" ; then
+  QEMU_CFLAGS="-lpth -fPIC -DCONFIG_PTH $QEMU_CFLAGS"
+  LIBS="-lpth $LIBS"
+  libs_qga="$libs_qga -lpth"
+fi
+if test "$extsnap" = "yes" ; then
+QEMU_CFLAGS="-DCONFIG_EXTSNAP $QEMU_CFLAGS"
+fi
 #**************************
 #PARSA END
 #**************************
@@ -5460,6 +5481,8 @@ echo "VxHS block device $vxhs"
 echo "#**************************"
 echo "#PARSA START"
 echo "#**************************"
+echo "GNU Pth           $pth"
+echo "external snapshots support $extsnap"
 echo "quantum support   $quantum"
 echo "#**************************"
 echo "#PARSA END"
@@ -6469,6 +6492,12 @@ fi
 #**************************
 #PARSA START
 #**************************
+if test "$pth" = "yes" ; then
+  echo "CONFIG_PTH=y" >> $config_host_mak
+fi
+if test "$extsnap" = "yes" ; then
+  echo "CONFIG_EXTSNAP=y" >> $config_host_mak
+fi
 if test "$quantum" = "yes" ; then
 echo "CONFIG_QUANTUM=y" >> $config_host_mak
 fi

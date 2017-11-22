@@ -265,7 +265,8 @@ void cpu_update_icount(CPUState *cpu)
 
 int64_t cpu_get_icount_raw(void)
 {
-    CPUState *cpu = current_cpu;
+    PTH_UPDATE_CONTEXT
+    CPUState *cpu = PTH(current_cpu);
 
     if (cpu && cpu->running) {
         if (!cpu->can_do_io) {
@@ -1092,7 +1093,11 @@ static void sigbus_reraise(void)
         raise(SIGBUS);
         sigemptyset(&set);
         sigaddset(&set, SIGBUS);
+#ifndef CONFIG_PTH
         pthread_sigmask(SIG_UNBLOCK, &set, NULL);
+#else
+        pthpthread_sigmask(SIG_UNBLOCK, &set, NULL);
+#endif
     }
     perror("Failed to re-raise SIGBUS!\n");
     abort();
@@ -1100,13 +1105,13 @@ static void sigbus_reraise(void)
 
 static void sigbus_handler(int n, siginfo_t *siginfo, void *ctx)
 {
+    PTH_UPDATE_CONTEXT
     if (siginfo->si_code != BUS_MCEERR_AO && siginfo->si_code != BUS_MCEERR_AR) {
         sigbus_reraise();
     }
-
-    if (current_cpu) {
+    if (PTH(current_cpu)) {
         /* Called asynchronously in VCPU thread.  */
-        if (kvm_on_sigbus_vcpu(current_cpu, siginfo->si_code, siginfo->si_addr)) {
+        if (kvm_on_sigbus_vcpu(PTH(current_cpu), siginfo->si_code, siginfo->si_addr)) {
             sigbus_reraise();
         }
     } else {
@@ -1213,6 +1218,7 @@ static void qemu_kvm_wait_io_event(CPUState *cpu)
 
 static void *qemu_kvm_cpu_thread_fn(void *arg)
 {
+    PTH_UPDATE_CONTEXT
     CPUState *cpu = arg;
     int r;
 
@@ -1222,8 +1228,7 @@ static void *qemu_kvm_cpu_thread_fn(void *arg)
     qemu_thread_get_self(cpu->thread);
     cpu->thread_id = qemu_get_thread_id();
     cpu->can_do_io = 1;
-    current_cpu = cpu;
-
+    PTH(current_cpu) = cpu;
     r = kvm_init_vcpu(cpu);
     if (r < 0) {
         fprintf(stderr, "kvm_init_vcpu failed: %s\n", strerror(-r));
@@ -1259,6 +1264,7 @@ static void *qemu_dummy_cpu_thread_fn(void *arg)
     fprintf(stderr, "qtest is not supported under Windows\n");
     exit(1);
 #else
+    PTH_UPDATE_CONTEXT
     CPUState *cpu = arg;
     sigset_t waitset;
     int r;
@@ -1269,8 +1275,7 @@ static void *qemu_dummy_cpu_thread_fn(void *arg)
     qemu_thread_get_self(cpu->thread);
     cpu->thread_id = qemu_get_thread_id();
     cpu->can_do_io = 1;
-    current_cpu = cpu;
-
+    PTH(current_cpu) = cpu;
     sigemptyset(&waitset);
     sigaddset(&waitset, SIG_IPI);
 
@@ -1495,19 +1500,6 @@ static void *qemu_tcg_rr_cpu_thread_fn(void *arg)
         cpu->thread_id = qemu_get_thread_id();
         cpu->created = true;
         cpu->can_do_io = 1;
-#ifdef CONFIG_QUANTUM
-        cpu->nr_instr = 0;
-        cpu->hasReachedInstrLimit = false;
-        cpu->nr_total_instr = 0;
-        cpu->nr_quantumHits = 0;
-        cpu->nr_exp[0] = 0;
-        cpu->nr_exp[1] = 0;
-        cpu->nr_exp[2] = 0;
-        cpu->nr_exp[3] = 0;
-        cpu->nr_exp[4] = 0;
-        cpu->nr_exp[5] = 0;
-#endif
-
     }
     qemu_cond_signal(&qemu_cpu_cond);
 
@@ -1545,7 +1537,7 @@ static void *qemu_tcg_rr_cpu_thread_fn(void *arg)
         while (cpu && !cpu->queued_work_first && !cpu->exit_request) {
 
             atomic_mb_set(&tcg_current_rr_cpu, cpu);
-            current_cpu = cpu;
+            PTH(current_cpu) = cpu;
 
             qemu_clock_enable(QEMU_CLOCK_VIRTUAL,
                               (cpu->singlestep_enabled & SSTEP_NOTIMER) == 0);
@@ -1590,6 +1582,9 @@ static void *qemu_tcg_rr_cpu_thread_fn(void *arg)
             }
 
             cpu = CPU_NEXT(cpu);
+
+            PTH_YIELD
+
         } /* while (cpu && !cpu->exit_request).. */
 
         /* Does not need atomic_mb_set because a spurious wakeup is okay.  */
@@ -1608,6 +1603,7 @@ static void *qemu_tcg_rr_cpu_thread_fn(void *arg)
 
 static void *qemu_hax_cpu_thread_fn(void *arg)
 {
+    PTH_UPDATE_CONTEXT
     CPUState *cpu = arg;
     int r;
 
@@ -1617,8 +1613,7 @@ static void *qemu_hax_cpu_thread_fn(void *arg)
     cpu->thread_id = qemu_get_thread_id();
     cpu->created = true;
     cpu->halted = 0;
-    current_cpu = cpu;
-
+    PTH(current_cpu) = cpu;
     hax_init_vcpu(cpu);
     qemu_cond_signal(&qemu_cpu_cond);
 
@@ -1656,6 +1651,7 @@ static void CALLBACK dummy_apc_func(ULONG_PTR unused)
 
 static void *qemu_tcg_cpu_thread_fn(void *arg)
 {
+    PTH_UPDATE_CONTEXT
     CPUState *cpu = arg;
 
     g_assert(!use_icount);
@@ -1668,7 +1664,6 @@ static void *qemu_tcg_cpu_thread_fn(void *arg)
     cpu->thread_id = qemu_get_thread_id();
     cpu->created = true;
     cpu->can_do_io = 1;
-
 #ifdef CONFIG_QUANTUM
     cpu->nr_instr = 0;
     cpu->hasReachedInstrLimit = false;
@@ -1681,8 +1676,7 @@ static void *qemu_tcg_cpu_thread_fn(void *arg)
     cpu->nr_exp[4] = 0;
     cpu->nr_exp[5] = 0;
 #endif
-
-    current_cpu = cpu;
+    PTH(current_cpu) = cpu;
     qemu_cond_signal(&qemu_cpu_cond);
 
     /* process any pending work */
@@ -1738,7 +1732,11 @@ static void qemu_cpu_kick_thread(CPUState *cpu)
         return;
     }
     cpu->thread_kicked = true;
+#ifndef CONFIG_PTH
     err = pthread_kill(cpu->thread->thread, SIG_IPI);
+#else
+    err = pthpthread_kill(cpu->thread->wrapper.pth_thread, SIG_IPI);
+#endif
     if (err) {
         fprintf(stderr, "qemu:%s: %s", __func__, strerror(err));
         exit(1);
@@ -1775,8 +1773,9 @@ void qemu_cpu_kick(CPUState *cpu)
 
 void qemu_cpu_kick_self(void)
 {
-    assert(current_cpu);
-    qemu_cpu_kick_thread(current_cpu);
+    PTH_UPDATE_CONTEXT
+    assert(PTH(current_cpu));
+    qemu_cpu_kick_thread(PTH(current_cpu));
 }
 
 bool qemu_cpu_is_self(CPUState *cpu)
@@ -1786,27 +1785,31 @@ bool qemu_cpu_is_self(CPUState *cpu)
 
 bool qemu_in_vcpu_thread(void)
 {
-    return current_cpu && qemu_cpu_is_self(current_cpu);
+    PTH_UPDATE_CONTEXT
+    return PTH(current_cpu) && qemu_cpu_is_self(PTH(current_cpu));
 }
-
+#ifndef CONFIG_PTH
 static __thread bool iothread_locked = false;
-
+#endif
 bool qemu_mutex_iothread_locked(void)
 {
-    return iothread_locked;
+    PTH_UPDATE_CONTEXT
+    return PTH(iothread_locked);
 }
 
 void qemu_mutex_lock_iothread(void)
 {
+    PTH_UPDATE_CONTEXT
     g_assert(!qemu_mutex_iothread_locked());
     qemu_mutex_lock(&qemu_global_mutex);
-    iothread_locked = true;
+    PTH(iothread_locked) = true;
 }
 
 void qemu_mutex_unlock_iothread(void)
 {
+    PTH_UPDATE_CONTEXT
     g_assert(qemu_mutex_iothread_locked());
-    iothread_locked = false;
+    PTH(iothread_locked) = false;
     qemu_mutex_unlock(&qemu_global_mutex);
 }
 
@@ -2005,10 +2008,11 @@ void qemu_init_vcpu(CPUState *cpu)
 
 void cpu_stop_current(void)
 {
-    if (current_cpu) {
-        current_cpu->stop = false;
-        current_cpu->stopped = true;
-        cpu_exit(current_cpu);
+    PTH_UPDATE_CONTEXT
+    if (PTH(current_cpu)) {
+        PTH(current_cpu)->stop = false;
+        PTH(current_cpu)->stopped = true;
+        cpu_exit(PTH(current_cpu));
         qemu_cond_broadcast(&qemu_pause_cond);
     }
 }
@@ -2267,58 +2271,3 @@ void dump_drift_info(FILE *f, fprintf_function cpu_fprintf)
         cpu_fprintf(f, "Max guest advance   NA\n");
     }
 }
-
-#ifdef CONFIG_QUANTUM
-void cpu_dbg(DbgDataAll *info)
-{
-//    CPUState *cpu;
-//    int length = 0;
-//    char * tmp = malloc (1024);
-
-//    double t = elapsed/1E9;
-
-//    int MIPS = (quantum_record_value/t) / 1E6;
-
-//    length += sprintf(tmp+ length, "Total time taken by CPU: %li\n", total_t  );
-
-//    length += sprintf(tmp+ length, "It took %lu nanoseconds (i.e. %f second) time to execute %lu instructions. - %i MIPS\n", elapsed, t, quantum_record_value, MIPS);
-
-//    length += sprintf(tmp+ length, "Total Number of instructions executed so far: %lu  so far.\n", total_num_instructions);
-
-//    CPU_FOREACH(cpu){
-//        info->size++;
-//    }
-
-//    info->data = g_malloc0(sizeof(DbgData)*info->size);
-//    CPU_FOREACH(cpu)
-//    {
-//        info->data[cpu->cpu_index].instr = cpu->nr_total_instr;
-//        sprintf(info->data[cpu->cpu_index].data, "\nDetails:\tQUANTUM-HITS\tIRQs\tEXP-DEBUGs\tHLTs\tSTOPs\tYIELDs\n%d\t\t%d\t%d\t\t%d\t%d\t%d\n",
-//                                                                                    cpu->nr_quantumHits,
-//                                                                                    cpu->nr_exp[0],
-//                                                                                    cpu->nr_exp[1],
-//                                                                                    cpu->nr_exp[2],
-//                                                                                    cpu->nr_exp[3],
-//                                                                                    cpu->nr_exp[4]);
-//    }
-
-}
-
-
-void cpu_zero_all(void)
-{
-    CPUState *cpu;
-    CPU_FOREACH(cpu)
-    {
-        cpu->nr_quantumHits = 0;
-        cpu->nr_total_instr = 0;
-        cpu->nr_exp[0] = 0;
-        cpu->nr_exp[1] = 0;
-        cpu->nr_exp[2] = 0;
-        cpu->nr_exp[3] = 0;
-        cpu->nr_exp[4] = 0;
-        cpu->nr_exp[5] = 0;
-
-    }
-}
-#endif
