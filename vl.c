@@ -4938,7 +4938,7 @@ int main(int argc, char **argv, char **envp)
     os_setup_post();
 
 #ifdef CONFIG_FLEXUS	//Start flexus
-    QEMU_initialize();
+    QEMU_initialize(timing_mode);
 
     simulator_obj_t* simulator = NULL;
 
