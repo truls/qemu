@@ -1160,13 +1160,13 @@
 { 'command': 'cpu-zero-all' }
 
 ##
-# @quantum-save:
+# @quantum-pause:
 #
-# save after core quantum
+# pause after core quantum
 #
 # Since: 2.10 - PARSALAB
 ##
-{ 'command': 'quantum-save' }
+{ 'command': 'quantum-pause' }
 
 ##
 # @memsave:

@@ -58,7 +58,7 @@ typedef struct {
     uint64_t quantum_value, quantum_record_value, quantum_node_value,quantum_step_value;
     char* quantum_file_value;
     uint64_t total_num_instructions, last_num_instruction;
-    bool quantum_save;
+    bool quantum_pause;
 } quantum_state_t;
 
 static quantum_state_t quantum_state;
@@ -832,7 +832,9 @@ void configure_quantum(QemuOpts *opts, Error **errp)
     if(qopt && qemu_loglevel_mask(CPU_LOG_TB_NOCHAIN))
         processForOpts(&quantum_state.quantum_value, qopt, errp);
     else if (qopt && !qemu_loglevel_mask(CPU_LOG_TB_NOCHAIN))
-        error_setg(errp, "quantum value is not guaranteed to work with chaning TBs. use '-d nochain'");
+        processForOpts(&quantum_state.quantum_value, qopt, errp);
+        printf("quantum value is not guaranteed to work with chaning TBs. use '-d nochain'");
+//        error_setg(errp, "quantum value is not guaranteed to work with chaning TBs. use '-d nochain'");
 
 
     if(qopt_record)
@@ -1365,14 +1367,20 @@ static void process_icount_data(CPUState *cpu)
     }
 }
 #ifdef CONFIG_QUANTUM
-bool query_quantum_save_state(void)
+bool query_quantum_pause_state(void)
 {
-    return quantum_state.quantum_save;
+    return quantum_state.quantum_pause;
 }
 
-void set_quantum_save_state(bool state)
+void quantum_unpause(void)
 {
-    quantum_state.quantum_save = state;
+    quantum_state.quantum_pause = false;
+    qmp_cont(NULL);
+}
+
+void quantum_pause(void)
+{
+    quantum_state.quantum_pause = true;
 }
 
 uint64_t* increment_total_num_instr(void)
@@ -1388,18 +1396,18 @@ void set_total_num_instr(uint64_t val)
 {
     quantum_state.total_num_instructions = val;
 }
-uint64_t* query_quantum_core_value(void)
+uint64_t query_quantum_core_value(void)
 {
-    return &quantum_state.quantum_value;
+    return quantum_state.quantum_value;
 }
-uint64_t* query_quantum_record_value(void)
+uint64_t query_quantum_record_value(void)
 {
-    return &quantum_state.quantum_record_value;
+    return quantum_state.quantum_record_value;
 }
 
-uint64_t* query_quantum_step_value(void)
+uint64_t query_quantum_step_value(void)
 {
-    return &quantum_state.quantum_step_value;
+    return quantum_state.quantum_step_value;
 }
 
 const char* query_quantum_file_value(void)
@@ -1407,9 +1415,9 @@ const char* query_quantum_file_value(void)
     return quantum_state.quantum_file_value;
 }
 
-uint64_t* query_quantum_node_value(void)
+uint64_t query_quantum_node_value(void)
 {
-    return &quantum_state.quantum_node_value;
+    return quantum_state.quantum_node_value;
 }
 
 void set_quantum_value(uint64_t val)
@@ -2263,7 +2271,7 @@ void dump_drift_info(FILE *f, fprintf_function cpu_fprintf)
 #ifdef CONFIG_QUANTUM
 void cpu_dbg(DbgDataAll *info)
 {
-    CPUState *cpu;
+//    CPUState *cpu;
 //    int length = 0;
 //    char * tmp = malloc (1024);
 
@@ -2277,22 +2285,22 @@ void cpu_dbg(DbgDataAll *info)
 
 //    length += sprintf(tmp+ length, "Total Number of instructions executed so far: %lu  so far.\n", total_num_instructions);
 
-    CPU_FOREACH(cpu){
-        info->size++;
-    }
+//    CPU_FOREACH(cpu){
+//        info->size++;
+//    }
 
-    info->data = g_malloc0(sizeof(DbgData)*info->size);
-    CPU_FOREACH(cpu)
-    {
-        info->data[cpu->cpu_index].instr = cpu->nr_total_instr;
-        sprintf(info->data[cpu->cpu_index].data, "\nDetails:\tQUANTUM-HITS\tIRQs\tEXP-DEBUGs\tHLTs\tSTOPs\tYIELDs\n%d\t\t%d\t%d\t\t%d\t%d\t%d\n",
-                                                                                    cpu->nr_quantumHits,
-                                                                                    cpu->nr_exp[0],
-                                                                                    cpu->nr_exp[1],
-                                                                                    cpu->nr_exp[2],
-                                                                                    cpu->nr_exp[3],
-                                                                                    cpu->nr_exp[4]);
-    }
+//    info->data = g_malloc0(sizeof(DbgData)*info->size);
+//    CPU_FOREACH(cpu)
+//    {
+//        info->data[cpu->cpu_index].instr = cpu->nr_total_instr;
+//        sprintf(info->data[cpu->cpu_index].data, "\nDetails:\tQUANTUM-HITS\tIRQs\tEXP-DEBUGs\tHLTs\tSTOPs\tYIELDs\n%d\t\t%d\t%d\t\t%d\t%d\t%d\n",
+//                                                                                    cpu->nr_quantumHits,
+//                                                                                    cpu->nr_exp[0],
+//                                                                                    cpu->nr_exp[1],
+//                                                                                    cpu->nr_exp[2],
+//                                                                                    cpu->nr_exp[3],
+//                                                                                    cpu->nr_exp[4]);
+//    }
 
 }
 

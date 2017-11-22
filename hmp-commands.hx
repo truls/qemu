@@ -1838,17 +1838,17 @@ STEXI
 Set Quantum value for all CPUs @var{var}
 ETEXI
     {
-        .name       = "quantum-save",
+        .name       = "quantum-pause",
         .args_type  = "",
         .params     = "",
-        .help       = "quantum-save",
-        .cmd  = hmp_quantum_save,
+        .help       = "quantum-pause",
+        .cmd  = hmp_quantum_pause,
     },
 
 STEXI
-@item quantum-save
-@findex quantum save
-activate saving on quantum
+@item quantum-pause
+@findex quantum pause
+activate pausing on quantum
 
 ETEXI
 

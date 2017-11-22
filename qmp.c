@@ -173,10 +173,10 @@ void qmp_cpu_zero_all(Error **errp)
 #endif
 }
 
-void qmp_quantum_save(Error **errp)
+void qmp_quantum_pause(Error **errp)
 {
 #ifdef CONFIG_QUANTUM
-    set_quantum_save_state(true);
+    quantum_pause();
 #endif
 }
 
