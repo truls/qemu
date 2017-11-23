@@ -158,19 +158,19 @@ void qmp_quantum_node_set(uint64_t val, Error **errp)
 }
 DbgDataAll *qmp_cpu_dbg(Error **errp)
 {
-#ifdef CONFIG_QUANTUM
-    DbgDataAll *info = g_malloc0(sizeof(*info));
-    cpu_dbg(info);
-    return info;
-#else
+//#ifdef CONFIG_QUANTUM
+//    DbgDataAll *info = g_malloc0(sizeof(*info));
+//    cpu_dbg(info);
+//    return info;
+//#else
     return NULL;
-#endif
+//#endif
 }
 void qmp_cpu_zero_all(Error **errp)
 {
-#ifdef CONFIG_QUANTUM
-    cpu_zero_all();
-#endif
+//#ifdef CONFIG_QUANTUM
+//    cpu_zero_all();
+//#endif
 }
 
 void qmp_quantum_pause(Error **errp)
