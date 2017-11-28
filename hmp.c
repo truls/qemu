@@ -1327,8 +1327,10 @@ void hmp_savevm(Monitor *mon, const QDict *qdict)
 
     save_snapshot(qdict_get_try_str(qdict, "name"), &err);
     hmp_handle_error(mon, &err);
+#ifdef CONFIG_QUANTUM
     if (query_quantum_pause_state())
         quantum_unpause();
+#endif
 }
 
 void hmp_delvm(Monitor *mon, const QDict *qdict)
