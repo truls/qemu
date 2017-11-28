@@ -1489,6 +1489,8 @@ static void deal_with_unplugged_cpus(void)
 
 static void *qemu_tcg_rr_cpu_thread_fn(void *arg)
 {
+    PTH_UPDATE_CONTEXT
+
     CPUState *cpu = arg;
 
     rcu_register_thread();
@@ -1509,7 +1511,7 @@ static void *qemu_tcg_rr_cpu_thread_fn(void *arg)
 
         /* process any pending work */
         CPU_FOREACH(cpu) {
-            current_cpu = cpu;
+            PTH(current_cpu) = cpu;
             qemu_wait_io_event_common(cpu);
         }
     }
