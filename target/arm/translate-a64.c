@@ -1955,6 +1955,12 @@ static void gen_load_exclusive(DisasContext *s, int rt, int rt2,
             /* The pair must be single-copy atomic for the doubleword.  */
             memop |= MO_64 | MO_ALIGN;
             tcg_gen_qemu_ld_i64(cpu_exclusive_val, addr, idx, memop);
+#ifdef CONFIG_FLEXUS
+    FLEXUS_IF_IN_SIMULATION( gen_helper_flexus_ld_aa64(cpu_env,
+                  addr, tcg_const_i32( 1 << size /* size */ ),
+                  tcg_const_i32(IS_USER(s)),
+                               tcg_const_tl(flexus_ins_pc), tcg_const_i32(0)) );
+#endif
             if (s->be_data == MO_LE) {
                 tcg_gen_extract_i64(cpu_reg(s, rt), cpu_exclusive_val, 0, 32);
                 tcg_gen_extract_i64(cpu_reg(s, rt2), cpu_exclusive_val, 32, 32);
@@ -1968,10 +1974,21 @@ static void gen_load_exclusive(DisasContext *s, int rt, int rt2,
             memop |= MO_64;
             tcg_gen_qemu_ld_i64(cpu_exclusive_val, addr, idx,
                                 memop | MO_ALIGN_16);
-
+#ifdef CONFIG_FLEXUS
+    FLEXUS_IF_IN_SIMULATION( gen_helper_flexus_ld_aa64(cpu_env,
+                  addr, tcg_const_i32( 1 << size /* size */ ),
+                  tcg_const_i32(IS_USER(s)),
+                               tcg_const_tl(flexus_ins_pc), tcg_const_i32(0)) );
+#endif
             TCGv_i64 addr2 = tcg_temp_new_i64();
             tcg_gen_addi_i64(addr2, addr, 8);
             tcg_gen_qemu_ld_i64(cpu_exclusive_high, addr2, idx, memop);
+#ifdef CONFIG_FLEXUS
+    FLEXUS_IF_IN_SIMULATION( gen_helper_flexus_ld_aa64(cpu_env,
+                  addr, tcg_const_i32( 1 << size /* size */ ),
+                  tcg_const_i32(IS_USER(s)),
+                               tcg_const_tl(flexus_ins_pc), tcg_const_i32(0)) );
+#endif
             tcg_temp_free_i64(addr2);
 
             tcg_gen_mov_i64(cpu_reg(s, rt), cpu_exclusive_val);
@@ -1980,6 +1997,12 @@ static void gen_load_exclusive(DisasContext *s, int rt, int rt2,
     } else {
         memop |= size | MO_ALIGN;
         tcg_gen_qemu_ld_i64(cpu_exclusive_val, addr, idx, memop);
+#ifdef CONFIG_FLEXUS
+    FLEXUS_IF_IN_SIMULATION( gen_helper_flexus_ld_aa64(cpu_env,
+                  addr, tcg_const_i32( 1 << size /* size */ ),
+                  tcg_const_i32(IS_USER(s)),
+                               tcg_const_tl(flexus_ins_pc), tcg_const_i32(0)) );
+#endif
         tcg_gen_mov_i64(cpu_reg(s, rt), cpu_exclusive_val);
     }
     tcg_gen_mov_i64(cpu_exclusive_addr, addr);

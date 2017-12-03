@@ -8099,6 +8099,12 @@ static void gen_load_exclusive(DisasContext *s, int rt, int rt2,
         TCGv_i64 t64 = tcg_temp_new_i64();
 
         gen_aa32_ld_i64(s, t64, addr, get_mem_index(s), opc);
+#ifdef CONFIG_FLEXUS
+        FLEXUS_IF_IN_SIMULATION( gen_helper_flexus_ld_aa32(cpu_env,
+                      addr, tcg_const_i32( 8 /* size */ ),
+                      tcg_const_i32(IS_USER(s)),
+                                   tcg_const_tl(flexus_ins_pc), tcg_const_i32(0)) );
+#endif
         tcg_gen_mov_i64(cpu_exclusive_val, t64);
         tcg_gen_extr_i64_i32(tmp, tmp2, t64);
         tcg_temp_free_i64(t64);
@@ -8106,6 +8112,12 @@ static void gen_load_exclusive(DisasContext *s, int rt, int rt2,
         store_reg(s, rt2, tmp2);
     } else {
         gen_aa32_ld_i32(s, tmp, addr, get_mem_index(s), opc);
+#ifdef CONFIG_FLEXUS
+        FLEXUS_IF_IN_SIMULATION( gen_helper_flexus_ld_aa32(cpu_env,
+                      addr, tcg_const_i32( 4 /* size */ ),
+                      tcg_const_i32(IS_USER(s)),
+                                   tcg_const_tl(flexus_ins_pc), tcg_const_i32(0)) );
+#endif
         tcg_gen_extu_i32_i64(cpu_exclusive_val, tmp);
     }
 

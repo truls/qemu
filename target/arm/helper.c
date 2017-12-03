@@ -11321,17 +11321,14 @@ void helper_flexus_periodic(CPUARMState *env, int isUser){
   int64_t simulation_length = QEMU_get_simulation_length();
   if( simulation_length >= 0 && instCnt >= simulation_length ) {
 
-    static int already_tried_to_exit = 0;
+    static bool exited = false;
+    exited = QEMU_break_simulation("Reached the end of the simulation");
 
-    if( already_tried_to_exit == 0 ) {
-      already_tried_to_exit = 1;
-      QEMU_break_simulation("Reached the end of the simulation");
+    if (exited){
+        cpu->exit_request = 1;
+        cpu_loop_exit(cpu);
+        return ;
     }
-    //exit_request = 1;
-    cpu->exit_request = 1;
-    cpu_loop_exit(cpu);
-
-    return ;
   }
 
 #ifdef CONFIG_DEBUG_LIBQFLEX
