@@ -1446,12 +1446,7 @@ void set_quantum_node_value(uint64_t val)
     quantum_state.quantum_node_value = val;
 }
 #endif
-#ifdef CONFIG_FLEXUS
-void advance_qemu(void){
-    tcg_cpu_exec(current_cpu);
 
-}
-#endif
 static int tcg_cpu_exec(CPUState *cpu)
 {
     int ret;
@@ -1489,6 +1484,13 @@ static void deal_with_unplugged_cpus(void)
         }
     }
 }
+
+#ifdef CONFIG_FLEXUS
+void advance_qemu(void){
+    tcg_cpu_exec(current_cpu);
+
+}
+#endif
 
 /* Single-threaded TCG
  *
