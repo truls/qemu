@@ -418,6 +418,12 @@ bogus_os="no"
 #**************************
 #PARSA START
 #**************************
+#quantum support
+quantum="no"
+# gnu pth support
+pth="no"
+#external snapshot support
+extsnap=""
 #flexus support 
 flexus="no"
 #**************************
@@ -933,10 +939,21 @@ for opt do
     # configure to be used by RPM and similar macros that set
     # lots of directory switches by default.
   ;;
-
 #**************************
 #PARSA START
 #**************************
+  --disable-quantum) quantum="no"
+  ;;
+  --enable-quantum) quantum="yes"
+  ;;
+  --disable-pth) pth="no"
+  ;;
+  --enable-pth) pth="yes"
+;;
+  --disable-extsnap) extsnap="no"
+  ;;
+  --enable-extsnap) extsnap="yes"
+  ;;
    --disable-flexus) flexus="no"
   ;;
   --enable-flexus) flexus="yes"
@@ -1556,8 +1573,11 @@ disabled with --disable-FEATURE, default is enabled if available:
   #**************************
   #PARSA START
   #**************************
-  flexus          support for the Flexus simulator
-  #**************************
+  GNU Pth         support for GNU Pth - The GNU Portable Threads
+  extsnap         external snapshots support
+  Quantum	      support for quantum value - no MTTCG at the moment
+    flexus          support for the Flexus simulator
+#**************************
   #PARSA END
   #**************************
 NOTE: The object files are built at the place where configure is launched
@@ -5263,6 +5283,17 @@ fi
 #**************************
 #PARSA START
 #**************************
+if test "$quantum" = "yes" ; then
+QEMU_CFLAGS="-DCONFIG_QUANTUM $QEMU_CFLAGS"
+fi
+if test "$pth" = "yes" ; then
+  QEMU_CFLAGS="-lpth -fPIC -DCONFIG_PTH $QEMU_CFLAGS"
+  LIBS="-lpth $LIBS"
+  libs_qga="$libs_qga -lpth"
+fi
+if test "$extsnap" = "yes" ; then
+QEMU_CFLAGS="-DCONFIG_EXTSNAP $QEMU_CFLAGS"
+fi
 if test "$flexus" = "yes" ; then
   QEMU_CFLAGS=" -ldl -DCONFIG_FLEXUS $QEMU_CFLAGS"
   LIBS="-ldl $LIBS" 
@@ -5461,6 +5492,9 @@ echo "VxHS block device $vxhs"
 echo "#**************************"
 echo "#PARSA START"
 echo "#**************************"
+echo "GNU Pth           $pth"
+echo "external snapshots support $extsnap"
+echo "quantum support   $quantum"
 echo "Flexus support    $flexus"
 echo "#**************************"
 echo "#PARSA END"
@@ -6470,6 +6504,15 @@ fi
 #**************************
 #PARSA START
 #**************************
+if test "$pth" = "yes" ; then
+  echo "CONFIG_PTH=y" >> $config_host_mak
+fi
+if test "$extsnap" = "yes" ; then
+  echo "CONFIG_EXTSNAP=y" >> $config_host_mak
+fi
+if test "$quantum" = "yes" ; then
+echo "CONFIG_QUANTUM=y" >> $config_host_mak
+fi
 if test "$flexus" = "yes" ; then
   echo "CONFIG_FLEXUS=y" >> $config_host_mak
 fi

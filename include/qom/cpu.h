@@ -326,6 +326,14 @@ struct CPUState {
     int nr_cores;
     int nr_threads;
 
+#ifdef CONFIG_QUANTUM
+    uint64_t nr_instr;
+    uint64_t nr_total_instr; //shows how many instructions this CPU has executed so far
+    bool hasReachedInstrLimit;
+    int nr_exp[6];
+    int nr_quantumHits;
+#endif
+
     struct QemuThread *thread;
 #ifdef _WIN32
     HANDLE hThread;
@@ -431,7 +439,9 @@ extern struct CPUTailQ cpus;
     QTAILQ_FOREACH_REVERSE(cpu, &cpus, CPUTailQ, node)
 #define first_cpu QTAILQ_FIRST(&cpus)
 
+#ifndef CONFIG_PTH
 extern __thread CPUState *current_cpu;
+#endif
 
 static inline void cpu_tb_jmp_cache_clear(CPUState *cpu)
 {

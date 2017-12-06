@@ -11357,6 +11357,10 @@ static void disas_a64_insn(CPUARMState *env, DisasContext *s)
                                        tcg_const_i32( s->thumb ? 2 : 4 ), tcg_const_i32(IS_USER(s)),
                                        tcg_const_i32(QEMU_Non_Branch), tcg_const_i32(0) ));
  #endif
+#ifdef CONFIG_QUANTUM
+    gen_helper_quantum(cpu_env);
+#endif
+
     /* if we allocated any temporaries, free them here */
     free_tmp_a64(s);
 }

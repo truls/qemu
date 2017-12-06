@@ -42,6 +42,10 @@ extern int64_t flexus_simulation_length;
 #include "sys/prctl.h"
 #endif
 
+#ifdef CONFIG_EXTSNAP
+    bool exton = false;
+#endif
+
 #ifdef CONFIG_SDL
 #if defined(__APPLE__) || defined(main)
 #include <SDL.h>
@@ -523,6 +527,33 @@ static QemuOptsList qemu_icount_opts = {
     },
 };
 
+#ifdef CONFIG_QUANTUM
+static QemuOptsList qemu_quantum_opts = {
+    .name = "quantum",
+    .implied_opt_name = "core",
+    .merge_lists = true,
+    .head = QTAILQ_HEAD_INITIALIZER(qemu_quantum_opts.head),
+    .desc = {
+        {
+            .name = "core",
+            .type = QEMU_OPT_STRING,
+        }, {
+            .name = "record",
+            .type = QEMU_OPT_STRING,
+        },{
+            .name = "step",
+            .type = QEMU_OPT_STRING,
+        },{
+            .name = "file",
+            .type = QEMU_OPT_STRING,
+        },{
+            .name = "node",
+            .type = QEMU_OPT_STRING,
+        },
+        { /* end of list */ }
+    },
+};
+#endif
 static QemuOptsList qemu_semihosting_config_opts = {
     .name = "semihosting-config",
     .implied_opt_name = "enable",
@@ -1810,8 +1841,9 @@ void qemu_system_guest_panicked(GuestPanicInformation *info)
 {
     qemu_log_mask(LOG_GUEST_ERROR, "Guest crashed\n");
 
-    if (current_cpu) {
-        current_cpu->crash_occurred = true;
+    PTH_UPDATE_CONTEXT
+    if (PTH(current_cpu)) {
+        PTH(current_cpu)->crash_occurred = true;
     }
     qapi_event_send_guest_panicked(GUEST_PANIC_ACTION_PAUSE,
                                    !!info, info, &error_abort);
@@ -3105,6 +3137,9 @@ static void register_global_properties(MachineState *ms)
 
 int main(int argc, char **argv, char **envp)
 {
+#ifdef CONFIG_PTH
+    initMainThread();
+#endif
     int i;
     int snapshot, linux_boot;
     const char *initrd_filename;
@@ -3115,6 +3150,9 @@ int main(int argc, char **argv, char **envp)
     int cyls, heads, secs, translation;
     QemuOpts *opts, *machine_opts;
     QemuOpts *hda_opts = NULL, *icount_opts = NULL, *accel_opts = NULL;
+#ifdef CONFIG_QUANTUM
+    QemuOpts *quantum_opts = NULL;
+#endif
     QemuOptsList *olist;
     int optind;
     const char *optarg;
@@ -3140,6 +3178,9 @@ int main(int argc, char **argv, char **envp)
     Error *main_loop_err = NULL;
     Error *err = NULL;
     bool list_data_dirs = false;
+#ifdef CONFIG_EXTSNAP
+    const char* loadext = NULL;
+#endif
     char **dirs;
     typedef struct BlockdevOptions_queue {
         BlockdevOptions *bdo;
@@ -3190,6 +3231,9 @@ int main(int argc, char **argv, char **envp)
     qemu_add_opts(&qemu_name_opts);
     qemu_add_opts(&qemu_numa_opts);
     qemu_add_opts(&qemu_icount_opts);
+#ifdef CONFIG_QUANTUM
+    qemu_add_opts(&qemu_quantum_opts);
+#endif
     qemu_add_opts(&qemu_semihosting_config_opts);
     qemu_add_opts(&qemu_fw_cfg_opts);
     module_call_init(MODULE_INIT_OPTS);
@@ -3422,6 +3466,15 @@ int main(int argc, char **argv, char **envp)
                 exit(1);
 #endif
                 break;
+#ifdef CONFIG_EXTSNAP
+            case QEMU_OPTION_exton:
+                exton = true;
+                break;
+            case QEMU_OPTION_loadext:
+                exton = true;
+                loadext = optarg;
+                break;
+#endif
             case QEMU_OPTION_portrait:
                 graphic_rotate = 90;
                 break;
@@ -3815,6 +3868,15 @@ int main(int argc, char **argv, char **envp)
                     default_monitor = 0;
                 }
                 break;
+#ifdef CONFIG_QUANTUM
+            case QEMU_OPTION_quantum:
+                quantum_opts = qemu_opts_parse_noisily(qemu_find_opts("quantum"),
+                                                      optarg, true);
+                if (!quantum_opts) {
+                    exit(1);
+                }
+                break;
+#endif
             case QEMU_OPTION_debugcon:
                 add_device_config(DEV_DEBUGCON, optarg);
                 break;
@@ -4914,8 +4976,31 @@ int main(int argc, char **argv, char **envp)
         if (load_snapshot(loadvm, &local_err) < 0) {
             error_report_err(local_err);
             autostart = 0;
+#ifdef CONFIG_QUANTUM
+            if(query_quantum_record_value() > 0)
+                raise(SIGSTOP);
+#endif
         }
     }
+#ifdef CONFIG_QUANTUM
+    if (quantum_opts)
+        configure_quantum(quantum_opts, &error_abort);
+#endif
+
+#ifdef CONFIG_EXTSNAP
+    if (exton) {
+        if(create_tmp_overlay() < 0){
+            fprintf(stdout, "External snapshots subsystem can not be loaded\n");
+            exit(1);
+	}
+    }
+    if (loadext) {
+        if(incremental_load_vmstate_ext(loadext, NULL) < 0){
+            fprintf(stdout, "External snapshot with args: %s, can not be loaded\n", loadext);
+            exit(1);
+	}
+    }
+#endif
 
     qdev_prop_check_globals();
     if (vmstate_dump_file) {
@@ -4963,7 +5048,11 @@ int main(int argc, char **argv, char **envp)
     main_loop();
     replay_disable_events();
     iothread_stop_all();
-
+#ifdef CONFIG_EXTSNAP
+    if (exton == true) {
+       delete_tmp_overlay();
+    }
+#endif
     pause_all_vcpus();
     bdrv_close_all();
     res_free();

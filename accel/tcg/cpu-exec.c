@@ -36,6 +36,41 @@
 #include "sysemu/cpus.h"
 #include "sysemu/replay.h"
 
+#ifdef CONFIG_QUANTUM
+#define QUANTUM_LIMIT \
+    !cpu->hasReachedInstrLimit
+
+#else // CONFIG_QUANTUM
+#define QUANTUM_LIMIT 1
+#endif
+#ifdef CONFIG_PTH
+extern int iloop;
+bool bExit = false;
+static int iExit;
+#define INIT_LOOP \
+    iExit = 0;
+#define CHECK_EXIT \
+        if (bExit) { \
+            bExit = false; \
+            break; \
+        }
+#define CHECK_LOOP(cpu, limit) \
+    if (limit > 0) {\
+        if (++iExit > limit) {\
+            iExit = 0; \
+            bExit = true; \
+            qemu_cpu_kick(cpu); \
+        }}
+#define TB_CMP(tb, last_tb) \
+	if (tb == last_tb){ \
+                PTH_YIELD \
+            }
+#else
+#define INIT_LOOP
+#define CHECK_EXIT 
+#define CHECK_LOOP(cpu, limit) 
+#define TB_CMP(tb, last_tb) 
+#endif
 #ifdef CONFIG_FLEXUS
 extern bool timing_mode;
 static bool timing_once = false;
@@ -68,7 +103,6 @@ static bool check_timing_loop_limit(void)
 #define FLEXUS_TIMING_LOOP_FLIP()
 #define FLEXUS_TIMING_LOOP_INIT()
 #endif
-
 /* -icount align implementation. */
 
 typedef struct SyncClocks {
@@ -691,13 +725,14 @@ static inline void cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
 
 int cpu_exec(CPUState *cpu)
 {
+    PTH_UPDATE_CONTEXT
+
     CPUClass *cc = CPU_GET_CLASS(cpu);
     int ret;
     SyncClocks sc = { 0 };
 
     /* replay_interrupt may need current_cpu */
-    current_cpu = cpu;
-
+    PTH(current_cpu) = cpu;
     if (cpu_handle_halt(cpu)) {
         return EXCP_HALTED;
     }
@@ -724,7 +759,7 @@ int cpu_exec(CPUState *cpu)
         cc = CPU_GET_CLASS(cpu);
 #else /* buggy compiler */
         /* Assert that the compiler does not smash local variables. */
-        g_assert(cpu == current_cpu);
+        g_assert(cpu == PTH(current_cpu));
         g_assert(cc == CPU_GET_CLASS(cpu));
 #endif /* buggy compiler */
         cpu->can_do_io = 1;
@@ -734,6 +769,7 @@ int cpu_exec(CPUState *cpu)
         }
     }
     FLEXUS_TIMING_LOOP_INIT();
+    INIT_LOOP
     /* if an exception is pending, we execute it here */
     while (!cpu_handle_exception(cpu, &ret)&& FLEXUS_TIMING_LOOP_CHECK()) {
         TranslationBlock *last_tb = NULL;
@@ -742,7 +778,8 @@ int cpu_exec(CPUState *cpu)
 
 
         while (!cpu_handle_interrupt(cpu, &last_tb) && FLEXUS_TIMING_LOOP_CHECK()) {
-            TranslationBlock *tb = tb_find(cpu, last_tb, tb_exit);
+                        CHECK_LOOP(cpu, iloop)
+TranslationBlock *tb = tb_find(cpu, last_tb, tb_exit);
             cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);
             /* Try to align the host and virtual clocks
                if the guest is in advance */
