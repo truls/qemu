@@ -424,6 +424,8 @@ quantum="no"
 pth="no"
 #external snapshot support
 extsnap=""
+#flexus support 
+flexus="no"
 #**************************
 #PARSA END
 #**************************
@@ -951,6 +953,10 @@ for opt do
   --disable-extsnap) extsnap="no"
   ;;
   --enable-extsnap) extsnap="yes"
+  ;;
+   --disable-flexus) flexus="no"
+  ;;
+  --enable-flexus) flexus="yes"
   ;;
 #**************************
 #PARSA END
@@ -1570,7 +1576,8 @@ disabled with --disable-FEATURE, default is enabled if available:
   GNU Pth         support for GNU Pth - The GNU Portable Threads
   extsnap         external snapshots support
   Quantum	      support for quantum value - no MTTCG at the moment
-  #**************************
+    flexus          support for the Flexus simulator
+#**************************
   #PARSA END
   #**************************
 NOTE: The object files are built at the place where configure is launched
@@ -5287,6 +5294,10 @@ fi
 if test "$extsnap" = "yes" ; then
 QEMU_CFLAGS="-DCONFIG_EXTSNAP $QEMU_CFLAGS"
 fi
+if test "$flexus" = "yes" ; then
+  QEMU_CFLAGS=" -ldl -DCONFIG_FLEXUS $QEMU_CFLAGS"
+  LIBS="-ldl $LIBS" 
+fi
 #**************************
 #PARSA END
 #**************************
@@ -5484,6 +5495,7 @@ echo "#**************************"
 echo "GNU Pth           $pth"
 echo "external snapshots support $extsnap"
 echo "quantum support   $quantum"
+echo "Flexus support    $flexus"
 echo "#**************************"
 echo "#PARSA END"
 echo "#**************************"
@@ -6500,6 +6512,9 @@ if test "$extsnap" = "yes" ; then
 fi
 if test "$quantum" = "yes" ; then
 echo "CONFIG_QUANTUM=y" >> $config_host_mak
+fi
+if test "$flexus" = "yes" ; then
+  echo "CONFIG_FLEXUS=y" >> $config_host_mak
 fi
 #**************************
 #PARSA END
