@@ -11434,7 +11434,7 @@ uint64_t readReg(void *cs_, int reg_idx, int reg_type) {
     switch(reg_type)
     {
     case GENERAL:
-        assert (reg_idx < 31 && reg_idx >= 0);
+        assert (reg_idx <= 31 && reg_idx >= 0);
         return env->xregs[reg_idx];
         break;
     case SPECIAL:
