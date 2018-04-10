@@ -1485,13 +1485,12 @@ static void deal_with_unplugged_cpus(void)
     }
 }
 
-#ifdef CONFIG_FLEXUS
+#ifdef CONFIG_FLEXUS 
 void advance_qemu(void){
-    tcg_cpu_exec(current_cpu);
-
+    PTH_UPDATE_CONTEXT
+    tcg_cpu_exec(PTH(current_cpu));
 }
 #endif
-
 /* Single-threaded TCG
  *
  * In the single-threaded case each vCPU is simulated in turn. If
