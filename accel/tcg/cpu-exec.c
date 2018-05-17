@@ -770,6 +770,13 @@ int cpu_exec(CPUState *cpu)
     }
     FLEXUS_TIMING_LOOP_INIT();
     INIT_LOOP
+
+    if (cpu->exception_index >= 0 ){
+        ret = cpu->exception_index;
+    }
+    else if(cpu->interrupt_request > 0){
+        ret = cpu->interrupt_request;
+    }
     /* if an exception is pending, we execute it here */
     while (!cpu_handle_exception(cpu, &ret)&& FLEXUS_TIMING_LOOP_CHECK()) {
         TranslationBlock *last_tb = NULL;
