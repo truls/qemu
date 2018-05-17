@@ -1485,12 +1485,68 @@ static void deal_with_unplugged_cpus(void)
     }
 }
 
-#ifdef CONFIG_FLEXUS 
-void advance_qemu(void){
+#ifdef CONFIG_FLEXUS
+const char* advance_qemu(void){
     PTH_UPDATE_CONTEXT
-    tcg_cpu_exec(PTH(current_cpu));
+    CPUState *cpu = PTH(current_cpu);
+    int ret = 0;
+    const char* rstr;
+
+    do{
+        if (cpu_can_run(cpu)) {
+            ret = tcg_cpu_exec(cpu);
+            switch (ret) {
+            case EXCP_DEBUG:
+                cpu_handle_guest_debug(cpu);
+                rstr = "EXCP_DEBUG";
+                break;
+            case EXCP_HALTED:
+                rstr = "EXCP_HALTED";
+
+                /* during start-up the vCPU is reset and the thread is
+                 * kicked several times. If we don't ensure we go back
+                 * to sleep in the halted state we won't cleanly
+                 * start-up when the vCPU is enabled.
+                 *
+                 * cpu->halted should ensure we sleep in wait_io_event
+                 */
+                g_assert(cpu->halted);
+                break;
+            case EXCP_ATOMIC:
+                rstr = "EXCP_ATOMIC";
+
+                qemu_mutex_unlock_iothread();
+                cpu_exec_step_atomic(cpu);
+                qemu_mutex_lock_iothread();
+            default:
+                rstr = "DEFAULT";
+
+                /* Ignore everything else? */
+                break;
+            }
+        } else if (cpu->unplug) {
+            qemu_tcg_destroy_vcpu(cpu);
+            cpu->created = false;
+            qemu_cond_signal(&qemu_cpu_cond);
+            qemu_mutex_unlock_iothread();
+            rstr = "CPU UNPLUG";
+            return rstr;
+        }
+        else
+        {
+            rstr = "CPU ?";
+            return rstr;
+
+        }
+
+        atomic_mb_set(&cpu->exit_request, 0);
+        qemu_tcg_wait_io_event(cpu);
+    } while(0);
+
+    return rstr;
 }
 #endif
+
 /* Single-threaded TCG
  *
  * In the single-threaded case each vCPU is simulated in turn. If
