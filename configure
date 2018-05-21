@@ -422,6 +422,7 @@ bogus_os="no"
 quantum="no"
 # gnu pth support
 pth="no"
+pth_path=""
 #external snapshot support
 extsnap=""
 #flexus support 
@@ -949,7 +950,9 @@ for opt do
   --disable-pth) pth="no"
   ;;
   --enable-pth) pth="yes"
-;;
+  ;;
+  --pth-path=*) pth_path="$optarg"
+  ;;
   --disable-extsnap) extsnap="no"
   ;;
   --enable-extsnap) extsnap="yes"
@@ -5287,8 +5290,8 @@ if test "$quantum" = "yes" ; then
 QEMU_CFLAGS="-DCONFIG_QUANTUM $QEMU_CFLAGS"
 fi
 if test "$pth" = "yes" ; then
-  QEMU_CFLAGS="-lpth -fPIC -DCONFIG_PTH $QEMU_CFLAGS"
-  LIBS="-lpth $LIBS"
+  QEMU_CFLAGS="-I${pth_path}/include -L${pth_path}/lib -lpth -fPIC -DCONFIG_PTH $QEMU_CFLAGS"
+  LIBS="-L${pth_path}/lib -lpth $LIBS"
   libs_qga="$libs_qga -lpth"
 fi
 if test "$extsnap" = "yes" ; then
@@ -5493,6 +5496,7 @@ echo "#**************************"
 echo "#PARSA START"
 echo "#**************************"
 echo "GNU Pth           $pth"
+echo "PTH lib path:     $pth_path"
 echo "external snapshots support $extsnap"
 echo "quantum support   $quantum"
 echo "Flexus support    $flexus"
