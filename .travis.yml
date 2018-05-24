@@ -44,7 +44,8 @@ language: c
 sudo: required
 branches:
   only:
-    - master_parsa
+    - master
+    - dev
 # We will get submodules ourselves
 git:
   submodules: false
