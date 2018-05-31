@@ -262,6 +262,54 @@ int create_tmp_overlay(void) {
     return 0;
 }
 
+static int mkdir_p(const char *dir, const mode_t mode) {
+    char tmp[PATH_MAX];
+    char *p = NULL;
+    struct stat sb;
+    size_t len;
+
+    /* copy path */
+    strncpy(tmp, dir, sizeof(tmp));
+    len = strlen(dir);
+    if (len >= sizeof(tmp)) {
+        return -1;
+    }
+
+    /* remove trailing slash */
+    if(tmp[len - 1] == '/') {
+        tmp[len - 1] = 0;
+    }
+
+    /* recursive mkdir */
+    for(p = tmp + 1; *p; p++) {
+        if(*p == '/') {
+            *p = 0;
+            /* test path */
+            if (stat(tmp, &sb) != 0) {
+                /* path does not exist - create directory */
+                if (mkdir(tmp, mode) < 0) {
+                    return -1;
+                }
+            } else if (!S_ISDIR(sb.st_mode)) {
+                /* not a directory */
+                return -1;
+            }
+            *p = '/';
+        }
+    }
+    /* test path */
+    if (stat(tmp, &sb) != 0) {
+        /* path does not exist - create directory */
+        if (mkdir(tmp, mode) < 0) {
+            return -1;
+        }
+    } else if (!S_ISDIR(sb.st_mode)) {
+        /* not a directory */
+        return -1;
+    }
+    return 0;
+}
+
 static int create_new_snap_dir(const char *name) {
     int ret = -EINVAL;
     char snap_dir_path[PATH_MAX] = {};
@@ -269,7 +317,7 @@ static int create_new_snap_dir(const char *name) {
 
     sprintf(snap_dir_path, "%s/%s", qstring_get_str(dir_path),
                                  name);
-    ret = mkdir(snap_dir_path, 0777);
+    ret = mkdir_p(snap_dir_path, 0777);
     QDECREF(dir_path);
     return ret;
 }
@@ -325,6 +373,10 @@ int save_vmstate_ext(Monitor *mon, const char *name)
         goto end;
     }
 
+    if( access( snapshot_file, F_OK ) != -1 ) {
+        monitor_printf(mon, "overwriting snapshot directory %s\n", name);
+        remove(snapshot_file);
+    }
     ret = link(bs->filename, snapshot_file);
     if (ret < 0) {
         monitor_printf(mon, "Cannot save snapshot %s\n", name);
@@ -364,6 +416,12 @@ int save_vmstate_ext(Monitor *mon, const char *name)
 
     sprintf(command, "%s > %s/mem", output_command, snap_dir->string);
     const char *argv[] = { "/bin/sh", "-c", command, NULL };
+
+#ifdef CONFIG_FLEXUS
+    flexus_doSave(snap_dir->string, &local_err);
+    if (local_err)
+        error_report_err(local_err);
+#endif
 
     QIOChannel *ioc;
     ioc = QIO_CHANNEL(qio_channel_command_new_spawn(argv,
@@ -549,7 +607,13 @@ int incremental_load_vmstate_ext (const char *name, Monitor *mon) {
     }
 
     while (cur) {
-        cur_name = get_snap_name(cur->string);
+//        cur_name = get_snap_name(cur->string);
+        int pos = (strlen(cur->string) - (strlen(cur->string) - strlen(dir_path->string))  + 1);
+	if (pos <= 0 ) {
+		monitor_printf(mon, "bad snap name\n");
+		goto end;	
+	}
+        cur_name = &cur->string[pos];
         if (cur_name == NULL) {
             monitor_printf(mon, "Cannot load snapshot %s\n", name);
             ret = -EINVAL;
@@ -564,6 +628,11 @@ int incremental_load_vmstate_ext (const char *name, Monitor *mon) {
             monitor_printf(mon, "Cannot load memory for snapshot %s\n", name);
             goto end;
         }
+
+#ifdef CONFIG_FLEXUS
+        set_flexus_load_dir(cur->string);
+#endif
+
         QDECREF(cur);
         cur = qobject_to_qstring(qlist_pop(snap_chain));
     }
