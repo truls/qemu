@@ -11449,7 +11449,7 @@ uint64_t readReg(void *cs_, int reg_idx, int reg_type) {
     case STACK_POINTER:
         return env->sp_el[reg_idx];
         break;
-    case SAVED_PROGRAM_STATUS:
+    case SPSR:
         return env->banked_spsr[reg_idx];
         break;
     case PSTATE:
