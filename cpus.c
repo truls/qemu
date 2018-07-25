@@ -83,11 +83,16 @@ typedef struct flexus_state_t
     simulation_mode mode;
     uint64_t length;
     const char * simulator;
+    const char * config_file; // user_postload
     simulator_obj_t* simulator_obj;
     const char* load_dir;
 
 }flexus_state_t;
 static flexus_state_t flexus_state;
+
+static void flexus_setUserPostLoadFile ( const char *file_name){
+    simulator_config(file_name);
+}
 
 const char* flexus_simulation_status(void){
     return simulation_mode_strings[flexus_state.mode];
@@ -115,6 +120,9 @@ void prepareFlexus(void){
     if (flexus_in_simulation()) {
 
         if(hasSimulator()){
+            if (flexus_state.config_file){
+                flexus_setUserPostLoadFile(flexus_state.config_file);
+            }
             simulator_prepare();
             if (flexus_state.load_dir) {
                 flexus_doLoad(flexus_state.load_dir, NULL);
@@ -306,6 +314,7 @@ void flexus_doSave(const char *dir_name, Error **errp){
     flexus_qmp(QMP_FLEXUS_DOSAVE, dir_name, errp);
 
 }
+
 
 void flexus_doLoad(const char *dir_name, Error **errp){
     int file_count = 0;
@@ -1284,12 +1293,13 @@ void configure_quantum(QemuOpts *opts, Error **errp)
 #ifdef CONFIG_FLEXUS
 void configure_flexus(QemuOpts *opts, Error **errp)
 {
-    const char* mode_opt, *length_opt, *simulator_opt;
+    const char* mode_opt, *length_opt, *simulator_opt, *config_opt;
     mode_opt = qemu_opt_get(opts, "mode");
     length_opt = qemu_opt_get(opts, "length");
     simulator_opt = qemu_opt_get(opts, "simulator");
+    config_opt = qemu_opt_get(opts, "config");
 
-    if (!mode_opt || !length_opt || !simulator_opt){
+    if (!mode_opt || !length_opt || !simulator_opt || !config_opt){
         error_setg(errp, "all flexus option need to be defined");
     }
 
@@ -1324,6 +1334,11 @@ void configure_flexus(QemuOpts *opts, Error **errp)
         }
     } else {
         error_setg(errp, "simulator path contains no simulator!.\n");
+    }
+
+    flexus_state.config_file = strdup(config_opt);
+    if(! (access( flexus_state.config_file, F_OK ) != -1) ) {
+        error_setg(errp, "no config file (user_postload) at this path %s\n", config_opt);
     }
 
     initFlexus();

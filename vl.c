@@ -563,6 +563,9 @@ static QemuOptsList qemu_flexus_opts = {
         }, {
             .name = "simulator",
             .type = QEMU_OPT_STRING,
+        }, {
+            .name = "config",
+            .type = QEMU_OPT_STRING,
         },
         { /* end of list */ }
     },
