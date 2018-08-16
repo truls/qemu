@@ -11394,6 +11394,7 @@ physical_address_t mmu_logical_to_physical(void *cs_, logical_address_t va) {
   CPUState *cs = (CPUState*)cs_;
   physical_address_t pa = cpu_get_phys_page_debug(cs, va);
 
+  /* MARK
   hwaddr phys_addr;
   target_ulong page_size;
   int prot;
@@ -11404,10 +11405,8 @@ physical_address_t mmu_logical_to_physical(void *cs_, logical_address_t va) {
    MMUAccessType access_type = MMU_INST_FETCH;
   ARMMMUIdx mmu_idx = ARMMMUIdx_S1E3;
 
-
-  bool ret = get_phys_addr(cs->env_ptr, va, access_type, mmu_idx,
-                      &phys_addr, &attrs, &prot, &page_size, &fsr, &fi);
-
+  bool ret = get_phys_addr(cs->env_ptr, va, access_type, mmu_idx, &phys_addr, &attrs, &prot, &page_size, &fsr, &fi);
+  */
 
   if( pa != - 1 ) {
     // assuming phys address and logical address are the right size
@@ -11463,7 +11462,28 @@ uint64_t readReg(void *cs_, int reg_idx, int reg_type) {
         break;
     case FPSR:
         return vfp_get_fpcr(env);
+    case MMU_TCR:
+        {
+            int arm_el = reg_idx; // reg_idx is a misnomer here
+            return env->cp15.tcr_el[arm_el].raw_tcr;
+        }
+    case MMU_SCTLR:
+        {
+            int arm_el = reg_idx; // reg_idx is a misnomer here
+            return env->cp15.sctlr_el[arm_el];
+        }
+    case MMU_TTBR0:
+        {
+            int arm_el = reg_idx; // reg_idx is a misnomer here
+            return env->cp15.ttbr0_el[arm_el];
+        }
+    case MMU_TTBR1:
+        {
+            int arm_el = reg_idx; // reg_idx is a misnomer here
+            return env->cp15.ttbr1_el[arm_el];
+        }
     default:
+        fprintf(stderr,"ERROR case triggered in readReg. reg_idx: %d, reg_type: %d\n",reg_idx,reg_type);
         assert(false);
         break;
     }
