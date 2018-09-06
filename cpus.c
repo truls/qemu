@@ -52,6 +52,9 @@
 #include "sysemu/replay.h"
 #include "hw/boards.h"
 
+extern bool executed_once;
+
+
 #ifdef CONFIG_FLEXUS
 #include "../libqflex/flexus_proxy.h"
 #include "../libqflex/api.h"
@@ -138,7 +141,7 @@ void initFlexus(void){
 
         if( hasSimulator()) {
             QFLEX_API_Interface_Hooks_t* hooks = (QFLEX_API_Interface_Hooks_t*)malloc(sizeof(QFLEX_API_Interface_Hooks_t));
-            QFLEX_API_get_interface_hooks(hooks);
+            QFLEX_API_get_Interface_Hooks (hooks);
             simulator_init(hooks);
             free(hooks);
         } else {
@@ -1324,6 +1327,8 @@ void configure_flexus(QemuOpts *opts, Error **errp)
         error_setg(errp, "undefined simulation length.");
     }
 
+    QEMU_setSimulationTime(flexus_state.length);
+
     flexus_state.simulator = strdup(simulator_opt);
     if( access( flexus_state.simulator, F_OK ) != -1 ) {
         flexus_state.simulator_obj = simulator_load( flexus_state.simulator );
@@ -2073,7 +2078,7 @@ const char* advance_qemu(void){
     int ret = 0;
     const char* rstr;
 
-    do{
+    while(!executed_once){
         if (cpu_can_run(cpu)) {
             ret = tcg_cpu_exec(cpu);
             switch (ret) {
@@ -2122,8 +2127,8 @@ const char* advance_qemu(void){
 
         atomic_mb_set(&cpu->exit_request, 0);
         qemu_tcg_wait_io_event(cpu);
-    } while(0);
-
+    }
+    executed_once = false;
     return rstr;
 }
 #endif

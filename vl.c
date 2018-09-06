@@ -166,6 +166,9 @@ Chardev *virtcon_hds[MAX_VIRTIO_CONSOLES];
 Chardev *sclp_hds[MAX_SCLP_CONSOLES];
 int win2k_install_hack = 0;
 int singlestep = 0;
+#ifdef CONFIG_FLEXUS
+int smp_sockets = 1;
+#endif
 int smp_cpus = 1;
 int max_cpus = 1;
 int smp_cores = 1;
@@ -1433,6 +1436,9 @@ static void smp_parse(QemuOpts *opts)
         smp_cpus = cpus;
         smp_cores = cores;
         smp_threads = threads;
+#if CONFIG_FLEXUS
+        smp_sockets = sockets;
+#endif
     }
 
     if (smp_cpus > 1) {
