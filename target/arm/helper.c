@@ -8728,6 +8728,17 @@ static bool get_phys_addr_lpae(CPUARMState *env, target_ulong address,
         goto do_fault;
     }
 
+    fprintf(stdout,"-----QEMU ARM MMU-----\n"
+            "\tAddrSize: %d\n"
+            "\tT0Sz: %d\n"
+            "\tT1Sz: %d\n"
+            "\tTTBR_Select: %d\n"
+            "------QEMU ARM MMU ------\n",
+            addrsize,
+            t0sz,
+            t1sz,
+            ttbr_select);
+
     /* Note that QEMU ignores shareability and cacheability attributes,
      * so we don't need to do anything with the SH, ORGN, IRGN fields
      * in the TTBCR.  Similarly, TTBCR:A1 selects whether we get the
@@ -8822,6 +8833,12 @@ static bool get_phys_addr_lpae(CPUARMState *env, target_ulong address,
     /* Now we can extract the actual base address from the TTBR */
     descaddr = extract64(ttbr, 0, 48);
     descaddr &= ~indexmask;
+        fprintf(stdout,"-----QEMU ARM MMU-----\n"
+                "\tTTBR RAW: %x\n"
+                "\tTTBR MASKED: %x\n"
+                "------QEMU ARM MMU ------\n",
+                extract64(ttbr,0,48),
+                descaddr);
 
     /* The address field in the descriptor goes up to bit 39 for ARMv7
      * but up to bit 47 for ARMv8, but we use the descaddrmask
@@ -8845,6 +8862,14 @@ static bool get_phys_addr_lpae(CPUARMState *env, target_ulong address,
         descaddr &= ~7ULL;
         nstable = extract32(tableattrs, 4, 1);
         descriptor = arm_ldq_ptw(cs, descaddr, !nstable, mmu_idx, fsr, fi);
+        fprintf(stdout,"-----QEMU ARM MMU-----\n"
+                "\tTT level: %d\n"
+                "\tDescriptor address: %x\n"
+                "\tDescriptor Value: %x\n"
+                "------QEMU ARM MMU ------\n",
+                level,
+                descaddr,
+                descriptor);
         if (fi->s1ptw) {
             goto do_fault;
         }
@@ -9613,12 +9638,15 @@ static bool get_phys_addr(CPUARMState *env, target_ulong address,
     }
 
     if (regime_using_lpae_format(env, mmu_idx)) {
+        fprintf(stdout,"QFLEX TIMING GOT HERE LPAE......\n");
         return get_phys_addr_lpae(env, address, access_type, mmu_idx, phys_ptr,
                                   attrs, prot, page_size, fsr, fi);
     } else if (regime_sctlr(env, mmu_idx) & SCTLR_XP) {
+        fprintf(stdout,"QFLEX TIMING GOT HERE SCTLR_XP......\n");
         return get_phys_addr_v6(env, address, access_type, mmu_idx, phys_ptr,
                                 attrs, prot, page_size, fsr, fi);
     } else {
+        fprintf(stdout,"QFLEX TIMING GOT HERE v5 DEFAULT......\n");
         return get_phys_addr_v5(env, address, access_type, mmu_idx, phys_ptr,
                                 prot, page_size, fsr, fi);
     }
@@ -11436,9 +11464,27 @@ void helper_flexus_periodic(CPUARMState *env, int isUser){
   }
 }
 
+/* QFlex generic API functions */
 int cpu_proc_num(void *cs_) {
   CPUState *cs = (CPUState*)cs_;
   return cs->cpu_index;
+}
+
+void cpu_pop_indexes(int *indexes) {
+	int i = 0;
+	CPUState *cpu;
+	CPU_FOREACH(cpu) {
+		indexes[i] = cpu->cpu_index;
+		i++;
+	}
+}
+
+uint32_t  cpu_get_instruction(void *cs, uint64_t* addr)
+{
+    CPUState *cpu = (CPUState*)cs;
+    CPUARMState *env = cpu->env_ptr;
+
+    return cpu_ldl_code(env, *addr);
 }
 
 uint64_t cpu_get_program_counter(void *cs_) {
@@ -11456,11 +11502,9 @@ uint64_t cpu_get_program_counter(void *cs_) {
 }
 
 physical_address_t mmu_logical_to_physical(void *cs_, logical_address_t va) {
+  CPUState *cs = (CPUState*)cs_;
+  physical_address_t pa = cpu_get_phys_page_debug(cs, va);
 
-
-
-
-//    {
         MemTxAttrs attrs = {};
         ARMCPU *cpu = ARM_CPU(cs_);
         CPUARMState *env = &cpu->env;
@@ -11480,42 +11524,6 @@ physical_address_t mmu_logical_to_physical(void *cs_, logical_address_t va) {
             return -1;
         }
         return phys_addr;
-
-        //printf("phys: %lu\n\n",phys_addr);
-
-
-//    }
-//  CPUState *cs = (CPUState*)cs_;
-//  physical_address_t pa = cpu_get_phys_page_debug(cs, va);
-
-//  hwaddr phys_addr;
-//  target_ulong page_size;
-//  int prot;
-//  uint32_t fsr;
-//  MemTxAttrs attrs = {};
-//  ARMMMUFaultInfo fi = {};
-
-//   MMUAccessType access_type = MMU_INST_FETCH;
-//  ARMMMUIdx mmu_idx = ARMMMUIdx_S1E3;
-
-//  hwaddr phys = arm_cpu_get_phys_page_attrs_debug(cs, va, &attrs);
-
-//  /*bool ret = */get_phys_addr(cs->env_ptr, va, access_type, mmu_idx,
-//                      &phys_addr, &attrs, &prot, &page_size, &fsr, &fi);
-
-
-//  printf("phys: %lu\n\n",phys_addr);
-
-//  if( pa != - 1 ) {
-//    // assuming phys address and logical address are the right size
-//    // this gets the page then we need to do get the place in the page using va
-//    // logical_address_t mask = 0x0000000000000FFF;
-//    // The offset  seems to be 12bits for 32bit or 64bit addresses
-//   // pa = pa + (va & ~TARGET_PAGE_MASK);
-//    return pa;
-//  } else {
-//    return -1;
-//  }
 }
 
 void * qemu_cpu_get_address_space(void * cpu) {
@@ -11575,19 +11583,37 @@ uint64_t cpu_read_register(void * cpu, arm_register_t reg_type, int reg_idx) {
     case GENERAL:
         assert (reg_idx <= 31 && reg_idx >= 0);
         return env->xregs[reg_idx];
+        break;
     case FLOATING_POINT:
         return env->vfp.regs[reg_idx];
-    case PSTATE:
-        return pstate_read(env);
-    case FPCR:
-        return vfp_get_fpcr(env);
-    case FPSR:
-        return vfp_get_fpsr(env);
-
-    case EXP_IDX:
-        return cs->exception_index;
-
+        break;
+    case MMU_TCR:
+        {
+            int arm_el = reg_idx; // reg_idx is a misnomer here
+            return env->cp15.tcr_el[arm_el].raw_tcr;
+        }
+    case MMU_SCTLR:
+        {
+            int arm_el = reg_idx; // reg_idx is a misnomer here
+            return env->cp15.sctlr_el[arm_el];
+        }
+    case MMU_TTBR0:
+        {
+            int arm_el = reg_idx; // reg_idx is a misnomer here
+            return env->cp15.ttbr0_el[arm_el];
+        }
+    case MMU_TTBR1:
+        {
+            int arm_el = reg_idx; // reg_idx is a misnomer here
+            return env->cp15.ttbr1_el[arm_el];
+        }
+    case MMU_ID_AA64MMFR0_EL1:
+        {
+            ARMCPU* armState = arm_env_get_cpu(env);
+            return armState->id_aa64mmfr1;
+        }
     default:
+        fprintf(stderr,"ERROR case triggered in readReg. reg_idx: %d, reg_type: %d\n",reg_idx,reg_type);
         assert(false);
         break;
     }
