@@ -20,8 +20,88 @@
 
 #if defined(CONFIG_FLEXUS)
 #include "../libqflex/api.h"
+#include "disas/disas.h"
 
-void cpu_write_register( void *env_ptr, int reg_index, unsigned *reg_size, uint64_t value ) {
+
+
+const char* qemu_dump_state(void *obj){
+
+    CPUState *cpu = (CPUState*)obj;
+
+    FILE * fp;
+    fp = fopen ("qemu-dump-temp.txt", "w+");
+    cpu_dump_state(cpu, fp, fprintf, CPU_DUMP_FPU);
+    fclose(fp);
+
+    char * buffer = 0;
+    long length;
+    FILE * f = fopen ("qemu-dump-temp.txt", "rb");
+
+    if (f)
+    {
+      fseek (f, 0, SEEK_END);
+      length = ftell (f);
+      fseek (f, 0, SEEK_SET);
+      buffer = malloc (length);
+      if (buffer)
+      {
+        fread (buffer, 1, length, f);
+      }
+      fclose (f);
+    }
+
+    if (buffer){
+      return buffer;
+    } else {
+        assert(false);
+    }
+
+    int r = remove("qemu-dump-temp.txt");
+    if (r != 0) {
+        assert(false);
+    }
+
+}
+
+
+const char* disassemble(void* cpu, uint64_t pc){
+    CPUState *cs = (CPUState*)cpu;
+
+    FILE * fp;
+    fp = fopen ("disas-temp.txt", "w+");
+    target_disas(fp, cs, pc, 4, 2);
+    fclose(fp);
+
+    char * buffer = 0;
+    long length;
+    FILE * f = fopen ("disas-temp.txt", "rb");
+
+    if (f)
+    {
+      fseek (f, 0, SEEK_END);
+      length = ftell (f);
+      fseek (f, 0, SEEK_SET);
+      buffer = malloc (length);
+      if (buffer)
+      {
+        fread (buffer, 1, length, f);
+      }
+      fclose (f);
+    }
+
+    if (buffer){
+      return buffer;
+    } else {
+        assert(false);
+    }
+
+    int r = remove("disas-temp.txt");
+    if (r != 0) {
+        assert(false);
+    }
+}
+
+void cpu_write_register( void * cpu, arm_register_t reg_type, int reg_index, uint64_t value ) {
     assert(false);
 }
 
@@ -11424,52 +11504,136 @@ uint32_t  cpu_get_instruction(void *cs, uint64_t* addr)
 uint64_t cpu_get_program_counter(void *cs_) {
   CPUState *cs = (CPUState*)cs_;
   CPUARMState *env_ptr = cs->env_ptr;
-  uint64_t pc_addr;
+  uint64_t pc;
   if( env_ptr->aarch64 )
-    pc_addr = env_ptr->pc;
-  else
-    pc_addr = env_ptr->regs[15];
-  return pc_addr;
+    pc =  env_ptr->pc;
+  else {
+      assert(false);
+  }
+
+  return pc;
+
 }
 
 physical_address_t mmu_logical_to_physical(void *cs_, logical_address_t va) {
   CPUState *cs = (CPUState*)cs_;
   physical_address_t pa = cpu_get_phys_page_debug(cs, va);
 
-  /* MARK
-  hwaddr phys_addr;
-  target_ulong page_size;
-  int prot;
-  uint32_t fsr;
-  MemTxAttrs attrs = {};
-  ARMMMUFaultInfo fi = {};
+        MemTxAttrs attrs = {};
+        ARMCPU *cpu = ARM_CPU(cs_);
+        CPUARMState *env = &cpu->env;
+        hwaddr phys_addr;
+        target_ulong page_size;
+        int prot;
+        bool ret;
+        uint32_t fsr;
+        ARMMMUFaultInfo fi = {};
+        ARMMMUIdx mmu_idx = core_to_arm_mmu_idx(env, cpu_mmu_index(env, false));
 
-   MMUAccessType access_type = MMU_INST_FETCH;
-  ARMMMUIdx mmu_idx = ARMMMUIdx_S1E3;
+        ret = get_phys_addr(env, va, 0, mmu_idx, &phys_addr,
+                            &attrs, &prot, &page_size, &fsr, &fi);
 
-  bool ret = get_phys_addr(cs->env_ptr, va, access_type, mmu_idx, &phys_addr, &attrs, &prot, &page_size, &fsr, &fi);
-  */
 
-  if( pa != - 1 ) {
-    // assuming phys address and logical address are the right size
-    // this gets the page then we need to do get the place in the page using va
-    // logical_address_t mask = 0x0000000000000FFF; 
-    // The offset  seems to be 12bits for 32bit or 64bit addresses
-   // pa = pa + (va & ~TARGET_PAGE_MASK);
-    return pa;
-  } else {
-    return -1;
-  }
+        if (ret) {
+            return -1;
+        }
+        return phys_addr;
 }
 
-void *cpu_get_address_space_flexus(void *cs_) {
-  CPUState *cs = (CPUState*)cs_;
+void * qemu_cpu_get_address_space(void * cpu) {
+  CPUState *cs = (CPUState*)cpu;
   return cs->as;
 }
 
-uint64_t readReg(void *cs_, int reg_idx, int reg_type) {
+void cpu_read_exception(void* obj, exception_t* exp){
+    CPUState *cs = (CPUState*)obj;
+    ARMCPU *cpu = ARM_CPU(cs);
+    CPUARMState *env = &cpu->env;
 
-    CPUState *cs = (CPUState*)cs_;
+    exp->fsr = env->exception.fsr;
+    exp->syndrome = env->exception.syndrome;
+    exp->target_el = env->exception.target_el;
+    exp->vaddress = env->exception.vaddress;
+}
+
+uint64_t cpu_read_hcr_el2(void* obj){
+
+    CPUState *cs = (CPUState*)obj;
+    ARMCPU *cpu = ARM_CPU(cs);
+    CPUARMState *env = &cpu->env;
+    return env->cp15.hcr_el2;
+}
+
+bool cpu_read_AARCH64(void* obj){
+
+    CPUState *cs = (CPUState*)obj;
+    ARMCPU *cpu = ARM_CPU(cs);
+    CPUARMState *env = &cpu->env;
+    return env->aarch64;
+}
+
+uint32_t cpu_read_DCZID_EL0(void* obj){
+
+    CPUState *cs = (CPUState*)obj;
+    ARMCPU *cpu = ARM_CPU(cs);
+    return cpu->dcz_blocksize;
+}
+
+
+uint64_t* cpu_read_sctlr(void* obj){
+    CPUState *cs = (CPUState*)obj;
+    ARMCPU *cpu = ARM_CPU(cs);
+    CPUARMState *env = &cpu->env;
+
+    return env->cp15.sctlr_el;
+
+}
+
+uint32_t cpu_read_pstate(void * obj){
+
+    CPUState *cs = (CPUState*)obj;
+    ARMCPU *cpu = ARM_CPU(cs);
+    CPUARMState *env = &cpu->env;
+
+    return pstate_read(env);
+}
+uint32_t cpu_read_fpcr(void * obj){
+
+    CPUState *cs = (CPUState*)obj;
+    ARMCPU *cpu = ARM_CPU(cs);
+    CPUARMState *env = &cpu->env;
+
+    return vfp_get_fpcr(env);
+}
+
+uint32_t cpu_read_fpsr(void * obj){
+
+    CPUState *cs = (CPUState*)obj;
+    ARMCPU *cpu = ARM_CPU(cs);
+    CPUARMState *env = &cpu->env;
+
+    return vfp_get_fpsr(env);
+}
+
+//int cpu_read_el(void * obj){
+
+//    CPUState *cs = (CPUState*)obj;
+//    ARMCPU *cpu = ARM_CPU(cs);
+//    CPUARMState *env = &cpu->env;
+
+//    int ret = arm_current_el(env);
+
+//    if(ret >= 0 && ret < 2)
+//        return ret;
+//    else
+//        assert(false);
+
+//}
+
+
+uint64_t cpu_read_register(void * cpu, arm_register_t reg_type, int reg_idx) {
+
+    CPUState *cs = (CPUState*)cpu;
     CPUARMState *env = cs->env_ptr;
 
     switch(reg_type)
@@ -11478,32 +11642,9 @@ uint64_t readReg(void *cs_, int reg_idx, int reg_type) {
         assert (reg_idx <= 31 && reg_idx >= 0);
         return env->xregs[reg_idx];
         break;
-    case SPECIAL:
-        return env->xregs[reg_idx];
-        break;
     case FLOATING_POINT:
         return env->vfp.regs[reg_idx];
         break;
-    case EXCEPTION_LINK:
-        return env->elr_el[reg_idx];
-        break;
-    case STACK_POINTER:
-        return env->sp_el[reg_idx];
-        break;
-    case SAVED_PROGRAM_STATUS:
-        return env->banked_spsr[reg_idx];
-        break;
-    case PSTATE:
-        return env->pstate;
-        break;
-    case SYSTEM:
-        return env->elr_el[reg_idx];
-        break;
-    case FPCR:
-        return vfp_get_fpsr(env);
-        break;
-    case FPSR:
-        return vfp_get_fpcr(env);
     case MMU_TCR:
         {
             int arm_el = reg_idx; // reg_idx is a misnomer here
@@ -11537,21 +11678,6 @@ uint64_t readReg(void *cs_, int reg_idx, int reg_type) {
 }
 // prototype to suppress warning
 
-void cpu_read_register( void *env_ptr, int reg_index, unsigned *reg_size, void *data_out ) {
-  // TODO Do it!
-  CPUState *cs = (CPUState*)env_ptr;
-  ARMCPU *cpu = ARM_CPU(cs);
-  CPUARMState *env = &cpu->env;
-
-  if( reg_index < 15 ) {
-    int rsize = 4;
-    if( reg_size != NULL )
-      *reg_size = 4;
-
-    memcpy( data_out, &(env->regs[reg_index]), sizeof(char) * rsize);
-  } else
-    printf("WARNING: No register found, doing nothing\n");
-}
 
 /* ARM specific helpers */
 // TODO FLEXUS: check if we must use addr_read or addr_code
