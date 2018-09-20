@@ -8728,16 +8728,16 @@ static bool get_phys_addr_lpae(CPUARMState *env, target_ulong address,
         goto do_fault;
     }
 
-    fprintf(stdout,"-----QEMU ARM MMU-----\n"
-            "\tAddrSize: %d\n"
-            "\tT0Sz: %d\n"
-            "\tT1Sz: %d\n"
-            "\tTTBR_Select: %d\n"
-            "------QEMU ARM MMU ------\n",
-            addrsize,
-            t0sz,
-            t1sz,
-            ttbr_select);
+//    fprintf(stdout,"-----QEMU ARM MMU-----\n"
+//            "\tAddrSize: %d\n"
+//            "\tT0Sz: %d\n"
+//            "\tT1Sz: %d\n"
+//            "\tTTBR_Select: %d\n"
+//            "------QEMU ARM MMU ------\n",
+//            addrsize,
+//            t0sz,
+//            t1sz,
+//            ttbr_select);
 
     /* Note that QEMU ignores shareability and cacheability attributes,
      * so we don't need to do anything with the SH, ORGN, IRGN fields
@@ -8833,12 +8833,12 @@ static bool get_phys_addr_lpae(CPUARMState *env, target_ulong address,
     /* Now we can extract the actual base address from the TTBR */
     descaddr = extract64(ttbr, 0, 48);
     descaddr &= ~indexmask;
-        fprintf(stdout,"-----QEMU ARM MMU-----\n"
-                "\tTTBR RAW: %x\n"
-                "\tTTBR MASKED: %x\n"
-                "------QEMU ARM MMU ------\n",
-                extract64(ttbr,0,48),
-                descaddr);
+//        fprintf(stdout,"-----QEMU ARM MMU-----\n"
+//                "\tTTBR RAW: %x\n"
+//                "\tTTBR MASKED: %x\n"
+//                "------QEMU ARM MMU ------\n",
+//                extract64(ttbr,0,48),
+//                descaddr);
 
     /* The address field in the descriptor goes up to bit 39 for ARMv7
      * but up to bit 47 for ARMv8, but we use the descaddrmask
@@ -8862,14 +8862,14 @@ static bool get_phys_addr_lpae(CPUARMState *env, target_ulong address,
         descaddr &= ~7ULL;
         nstable = extract32(tableattrs, 4, 1);
         descriptor = arm_ldq_ptw(cs, descaddr, !nstable, mmu_idx, fsr, fi);
-        fprintf(stdout,"-----QEMU ARM MMU-----\n"
-                "\tTT level: %d\n"
-                "\tDescriptor address: %x\n"
-                "\tDescriptor Value: %x\n"
-                "------QEMU ARM MMU ------\n",
-                level,
-                descaddr,
-                descriptor);
+//        fprintf(stdout,"-----QEMU ARM MMU-----\n"
+//                "\tTT level: %d\n"
+//                "\tDescriptor address: %x\n"
+//                "\tDescriptor Value: %x\n"
+//                "------QEMU ARM MMU ------\n",
+//                level,
+//                descaddr,
+//                descriptor);
         if (fi->s1ptw) {
             goto do_fault;
         }
@@ -9638,15 +9638,15 @@ static bool get_phys_addr(CPUARMState *env, target_ulong address,
     }
 
     if (regime_using_lpae_format(env, mmu_idx)) {
-        fprintf(stdout,"QFLEX TIMING GOT HERE LPAE......\n");
+//        fprintf(stdout,"QFLEX TIMING GOT HERE LPAE......\n");
         return get_phys_addr_lpae(env, address, access_type, mmu_idx, phys_ptr,
                                   attrs, prot, page_size, fsr, fi);
     } else if (regime_sctlr(env, mmu_idx) & SCTLR_XP) {
-        fprintf(stdout,"QFLEX TIMING GOT HERE SCTLR_XP......\n");
+//        fprintf(stdout,"QFLEX TIMING GOT HERE SCTLR_XP......\n");
         return get_phys_addr_v6(env, address, access_type, mmu_idx, phys_ptr,
                                 attrs, prot, page_size, fsr, fi);
     } else {
-        fprintf(stdout,"QFLEX TIMING GOT HERE v5 DEFAULT......\n");
+//        fprintf(stdout,"QFLEX TIMING GOT HERE v5 DEFAULT......\n");
         return get_phys_addr_v5(env, address, access_type, mmu_idx, phys_ptr,
                                 prot, page_size, fsr, fi);
     }
@@ -11531,6 +11531,50 @@ void * qemu_cpu_get_address_space(void * cpu) {
   return cs->as;
 }
 
+void cpu_read_exception(void* obj, exception_t* exp){
+    CPUState *cs = (CPUState*)obj;
+    ARMCPU *cpu = ARM_CPU(cs);
+    CPUARMState *env = &cpu->env;
+
+    exp->fsr = env->exception.fsr;
+    exp->syndrome = env->exception.syndrome;
+    exp->target_el = env->exception.target_el;
+    exp->vaddress = env->exception.vaddress;
+}
+
+uint64_t cpu_read_hcr_el2(void* obj){
+
+    CPUState *cs = (CPUState*)obj;
+    ARMCPU *cpu = ARM_CPU(cs);
+    CPUARMState *env = &cpu->env;
+    return env->cp15.hcr_el2;
+}
+
+bool cpu_read_AARCH64(void* obj){
+
+    CPUState *cs = (CPUState*)obj;
+    ARMCPU *cpu = ARM_CPU(cs);
+    CPUARMState *env = &cpu->env;
+    return env->aarch64;
+}
+
+uint32_t cpu_read_DCZID_EL0(void* obj){
+
+    CPUState *cs = (CPUState*)obj;
+    ARMCPU *cpu = ARM_CPU(cs);
+    return cpu->dcz_blocksize;
+}
+
+
+uint64_t* cpu_read_sctlr(void* obj){
+    CPUState *cs = (CPUState*)obj;
+    ARMCPU *cpu = ARM_CPU(cs);
+    CPUARMState *env = &cpu->env;
+
+    return env->cp15.sctlr_el;
+
+}
+
 uint32_t cpu_read_pstate(void * obj){
 
     CPUState *cs = (CPUState*)obj;
@@ -11557,20 +11601,20 @@ uint32_t cpu_read_fpsr(void * obj){
     return vfp_get_fpsr(env);
 }
 
-int cpu_read_el(void * obj){
+//int cpu_read_el(void * obj){
 
-    CPUState *cs = (CPUState*)obj;
-    ARMCPU *cpu = ARM_CPU(cs);
-    CPUARMState *env = &cpu->env;
+//    CPUState *cs = (CPUState*)obj;
+//    ARMCPU *cpu = ARM_CPU(cs);
+//    CPUARMState *env = &cpu->env;
 
-    int ret = arm_current_el(env);
+//    int ret = arm_current_el(env);
 
-    if(ret >= 0 && ret < 2)
-        return ret;
-    else
-        assert(false);
+//    if(ret >= 0 && ret < 2)
+//        return ret;
+//    else
+//        assert(false);
 
-}
+//}
 
 
 uint64_t cpu_read_register(void * cpu, arm_register_t reg_type, int reg_idx) {

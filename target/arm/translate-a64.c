@@ -11436,6 +11436,11 @@ static int aarch64_tr_init_disas_context(DisasContextBase *dcbase,
 
     init_tmp_a64_array(dc);
 
+#ifdef CONFIG_FLEXUS
+    set_qemu_disas_context(dc); // for debugging purposes
+
+#endif
+
     return max_insns;
 }
 
