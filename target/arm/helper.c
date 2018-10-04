@@ -99,6 +99,35 @@ const char* disassemble(void* cpu, uint64_t pc){
     }
 }
 
+
+uint64_t cpu_get_pending_interrupt( void * obj) {
+    CPUState *cs = (CPUState*)obj;
+    uint64_t ret = 0;
+
+    if (cs->interrupt_request & CPU_INTERRUPT_HARD) {
+        ret |= CPSR_I;
+    }
+    if (cs->interrupt_request & CPU_INTERRUPT_FIQ) {
+        ret |= CPSR_F;
+    }
+    /* External aborts are not possible in QEMU so A bit is always clear */
+    return ret;
+}
+
+
+
+bool cpu_is_idle(void* obj)
+{
+    CPUState *cs = (CPUState*)obj;
+    ARMCPU *cpu = ARM_CPU(cs);
+
+    return !((cpu->power_state != PSCI_OFF)
+        && cs->interrupt_request &
+        (CPU_INTERRUPT_FIQ | CPU_INTERRUPT_HARD
+         | CPU_INTERRUPT_VFIQ | CPU_INTERRUPT_VIRQ
+         | CPU_INTERRUPT_EXITTB));
+}
+
 void cpu_write_register( void * cpu, arm_register_t reg_type, int reg_index, uint64_t value ) {
     assert(false);
 }
@@ -11558,6 +11587,14 @@ bool cpu_read_AARCH64(void* obj){
     return env->aarch64;
 }
 
+uint64_t cpu_read_sp_el(uint8_t id, void* obj){
+    CPUState *cs = (CPUState*)obj;
+    ARMCPU *cpu = ARM_CPU(cs);
+    CPUARMState *env = &cpu->env;
+
+    return env->sp_el[id];
+}
+
 uint32_t cpu_read_DCZID_EL0(void* obj){
 
     CPUState *cs = (CPUState*)obj;
@@ -11566,12 +11603,12 @@ uint32_t cpu_read_DCZID_EL0(void* obj){
 }
 
 
-uint64_t* cpu_read_sctlr(void* obj){
+uint64_t* cpu_read_sctlr(uint8_t id, void* obj){
     CPUState *cs = (CPUState*)obj;
     ARMCPU *cpu = ARM_CPU(cs);
     CPUARMState *env = &cpu->env;
 
-    return env->cp15.sctlr_el;
+    return env->cp15.sctlr_el[id];
 
 }
 
@@ -11624,34 +11661,34 @@ uint64_t cpu_read_register(void * cpu, arm_register_t reg_type, int reg_idx) {
 
     switch(reg_type)
     {
-    case GENERAL:
+    case kGENERAL:
         assert (reg_idx <= 31 && reg_idx >= 0);
         return env->xregs[reg_idx];
         break;
-    case FLOATING_POINT:
+    case kFLOATING_POINT:
         return env->vfp.regs[reg_idx];
         break;
-    case MMU_TCR:
+    case kMMU_TCR:
         {
             int arm_el = reg_idx; // reg_idx is a misnomer here
             return env->cp15.tcr_el[arm_el].raw_tcr;
         }
-    case MMU_SCTLR:
+    case kMMU_SCTLR:
         {
             int arm_el = reg_idx; // reg_idx is a misnomer here
             return env->cp15.sctlr_el[arm_el];
         }
-    case MMU_TTBR0:
+    case kMMU_TTBR0:
         {
             int arm_el = reg_idx; // reg_idx is a misnomer here
             return env->cp15.ttbr0_el[arm_el];
         }
-    case MMU_TTBR1:
+    case kMMU_TTBR1:
         {
             int arm_el = reg_idx; // reg_idx is a misnomer here
             return env->cp15.ttbr1_el[arm_el];
         }
-    case MMU_ID_AA64MMFR0_EL1:
+    case kMMU_ID_AA64MMFR0_EL1:
         {
             ARMCPU* armState = arm_env_get_cpu(env);
             return armState->id_aa64mmfr1;

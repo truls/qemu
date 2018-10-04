@@ -659,9 +659,9 @@ void tlb_set_page_with_attrs(CPUState *cpu, target_ulong vaddr,
 #ifdef CONFIG_FLEXUS
    /* Saving physical address along with the virtual address of a memory operation */
     te->paddr = paddr;
-	    #ifdef TARGET_SPARC64
+#ifdef TARGET_SPARC64
 		te->dummy[0] = cbits;
-	    #endif
+#endif
 #endif
     env->iotlb_v[mmu_idx][vidx] = env->iotlb[mmu_idx][index];
 
