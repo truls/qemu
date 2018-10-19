@@ -16,6 +16,8 @@
 #include "exec/semihost.h"
 #include "sysemu/kvm.h"
 
+//#define PRINT_MMU_STAGES
+
 #if defined(CONFIG_FLEXUS)
 #include "../libqflex/api.h"
 #include "disas/disas.h"
@@ -8757,16 +8759,18 @@ static bool get_phys_addr_lpae(CPUARMState *env, target_ulong address,
         goto do_fault;
     }
 
-//    fprintf(stdout,"-----QEMU ARM MMU-----\n"
-//            "\tAddrSize: %d\n"
-//            "\tT0Sz: %d\n"
-//            "\tT1Sz: %d\n"
-//            "\tTTBR_Select: %d\n"
-//            "------QEMU ARM MMU ------\n",
-//            addrsize,
-//            t0sz,
-//            t1sz,
-//            ttbr_select);
+#ifdef PRINT_MMU_STAGES 
+    fprintf(stdout,"-----QEMU ARM MMU-----\n"
+            "\tAddrSize: %d\n"
+            "\tT0Sz: %d\n"
+            "\tT1Sz: %d\n"
+            "\tTTBR_Select: %d\n"
+            "------QEMU ARM MMU ------\n",
+            addrsize,
+            t0sz,
+            t1sz,
+            ttbr_select);
+#endif
 
     /* Note that QEMU ignores shareability and cacheability attributes,
      * so we don't need to do anything with the SH, ORGN, IRGN fields
@@ -8862,12 +8866,14 @@ static bool get_phys_addr_lpae(CPUARMState *env, target_ulong address,
     /* Now we can extract the actual base address from the TTBR */
     descaddr = extract64(ttbr, 0, 48);
     descaddr &= ~indexmask;
-//        fprintf(stdout,"-----QEMU ARM MMU-----\n"
-//                "\tTTBR RAW: %x\n"
-//                "\tTTBR MASKED: %x\n"
-//                "------QEMU ARM MMU ------\n",
-//                extract64(ttbr,0,48),
-//                descaddr);
+#ifdef PRINT_MMU_STAGES
+        fprintf(stdout,"-----QEMU ARM MMU-----\n"
+                "\tTTBR RAW: %x\n"
+                "\tTTBR MASKED: %x\n"
+                "------QEMU ARM MMU ------\n",
+                extract64(ttbr,0,48),
+                descaddr);
+#endif
 
     /* The address field in the descriptor goes up to bit 39 for ARMv7
      * but up to bit 47 for ARMv8, but we use the descaddrmask
@@ -8891,14 +8897,16 @@ static bool get_phys_addr_lpae(CPUARMState *env, target_ulong address,
         descaddr &= ~7ULL;
         nstable = extract32(tableattrs, 4, 1);
         descriptor = arm_ldq_ptw(cs, descaddr, !nstable, mmu_idx, fsr, fi);
-//        fprintf(stdout,"-----QEMU ARM MMU-----\n"
-//                "\tTT level: %d\n"
-//                "\tDescriptor address: %x\n"
-//                "\tDescriptor Value: %x\n"
-//                "------QEMU ARM MMU ------\n",
-//                level,
-//                descaddr,
-//                descriptor);
+#ifdef PRINT_MMU_STAGES
+        fprintf(stdout,"-----QEMU ARM MMU-----\n"
+                "\tTT level: %d\n"
+                "\tDescriptor address: %x\n"
+                "\tDescriptor Value: %x\n"
+                "------QEMU ARM MMU ------\n",
+                level,
+                descaddr,
+                descriptor);
+#endif
         if (fi->s1ptw) {
             goto do_fault;
         }
@@ -9667,15 +9675,21 @@ static bool get_phys_addr(CPUARMState *env, target_ulong address,
     }
 
     if (regime_using_lpae_format(env, mmu_idx)) {
-//        fprintf(stdout,"QFLEX TIMING GOT HERE LPAE......\n");
+#ifdef PRINT_MMU_STAGES
+        fprintf(stdout,"QFLEX TIMING GOT HERE LPAE......\n");
+#endif
         return get_phys_addr_lpae(env, address, access_type, mmu_idx, phys_ptr,
                                   attrs, prot, page_size, fsr, fi);
     } else if (regime_sctlr(env, mmu_idx) & SCTLR_XP) {
-//        fprintf(stdout,"QFLEX TIMING GOT HERE SCTLR_XP......\n");
+#ifdef PRINT_MMU_STAGES
+        fprintf(stdout,"QFLEX TIMING GOT HERE SCTLR_XP......\n");
+#endif
         return get_phys_addr_v6(env, address, access_type, mmu_idx, phys_ptr,
                                 attrs, prot, page_size, fsr, fi);
     } else {
-//        fprintf(stdout,"QFLEX TIMING GOT HERE v5 DEFAULT......\n");
+#ifdef PRINT_MMU_STAGES
+        fprintf(stdout,"QFLEX TIMING GOT HERE v5 DEFAULT......\n");
+#endif
         return get_phys_addr_v5(env, address, access_type, mmu_idx, phys_ptr,
                                 prot, page_size, fsr, fi);
     }
