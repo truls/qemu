@@ -184,10 +184,10 @@ static QString *get_snap_path (const char *path) {
     return qstring_from_substr(path, 0, size - 1);
 }
 
-static const char* get_snap_name (const char *path) {
-    char* end = strrchr(path, '/');
-    return end + 1;
-}
+//static const char* get_snap_name (const char *path) {
+//    char* end = strrchr(path, '/');
+//    return end + 1;
+//}
 
 static QList *get_snap_chain (BlockDriverState *bs) {
     QList* lst = qlist_new();

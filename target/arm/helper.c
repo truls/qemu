@@ -11499,22 +11499,6 @@ int cpu_proc_num(void *cs_) {
   return cs->cpu_index;
 }
 
-void cpu_pop_indexes(int *indexes) {
-	int i = 0;
-	CPUState *cpu;
-	CPU_FOREACH(cpu) {
-		indexes[i] = cpu->cpu_index;
-		i++;
-	}
-}
-
-uint32_t  cpu_get_instruction(void *cs, uint64_t* addr)
-{
-    CPUState *cpu = (CPUState*)cs;
-    CPUARMState *env = cpu->env_ptr;
-
-    return cpu_ldl_code(env, *addr);
-}
 
 uint64_t cpu_get_program_counter(void *cs_) {
   CPUState *cs = (CPUState*)cs_;
@@ -11532,7 +11516,7 @@ uint64_t cpu_get_program_counter(void *cs_) {
 
 physical_address_t mmu_logical_to_physical(void *cs_, logical_address_t va) {
   CPUState *cs = (CPUState*)cs_;
-  physical_address_t pa = cpu_get_phys_page_debug(cs, va);
+//  physical_address_t pa = cpu_get_phys_page_debug(cs, va);
 
         MemTxAttrs attrs = {};
         ARMCPU *cpu = ARM_CPU(cs_);
@@ -11603,7 +11587,7 @@ uint32_t cpu_read_DCZID_EL0(void* obj){
 }
 
 
-uint64_t* cpu_read_sctlr(uint8_t id, void* obj){
+uint64_t cpu_read_sctlr(uint8_t id, void* obj){
     CPUState *cs = (CPUState*)obj;
     ARMCPU *cpu = ARM_CPU(cs);
     CPUARMState *env = &cpu->env;
