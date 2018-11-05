@@ -2072,9 +2072,9 @@ static void deal_with_unplugged_cpus(void)
 }
 
 #ifdef CONFIG_FLEXUS
-const char* advance_qemu(void){
+const char* advance_qemu(void * obj){
     PTH_UPDATE_CONTEXT
-    CPUState *cpu = PTH(current_cpu);
+    CPUState *cpu = PTH((CPUState *)obj);
     int ret = 0;
     const char* rstr;
 
