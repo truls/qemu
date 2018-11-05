@@ -61,6 +61,7 @@ static target_ulong flexus_ins_pc = -1;
 static TCGv_i64 cpu_X[32];
 static TCGv_i64 cpu_pc;
 
+
 /* Load/store exclusive handling */
 static TCGv_i64 cpu_exclusive_high;
 static TCGv_i64 cpu_reg(DisasContext *s, int reg);
@@ -11366,6 +11367,7 @@ static void disas_a64_insn(CPUARMState *env, DisasContext *s)
         gen_helper_phases(cpu_env);
 #endif
 
+
     /* if we allocated any temporaries, free them here */
     free_tmp_a64(s);
 }
@@ -11435,11 +11437,6 @@ static int aarch64_tr_init_disas_context(DisasContextBase *dcbase,
     max_insns = MIN(max_insns, bound);
 
     init_tmp_a64_array(dc);
-
-#ifdef CONFIG_FLEXUS
-    set_qemu_disas_context(dc); // for debugging purposes
-
-#endif
 
     return max_insns;
 }

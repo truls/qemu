@@ -104,6 +104,7 @@ const char* disassemble(void* cpu, uint64_t pc){
 
 uint64_t cpu_get_pending_interrupt( void * obj) {
     CPUState *cs = (CPUState*)obj;
+    return 0;
     uint64_t ret = 0;
 
     if (cs->interrupt_request & CPU_INTERRUPT_HARD) {
@@ -116,6 +117,12 @@ uint64_t cpu_get_pending_interrupt( void * obj) {
     return ret;
 }
 
+uint64_t cpu_get_program_counter(void *cs_) {
+    CPUState* cs = (CPUState*)cs_;
+    ARMCPU *cpu = ARM_CPU(cs);
+    CPUARMState *env = &cpu->env;
+    return env->pc;
+}
 
 
 bool cpu_is_idle(void* obj)
@@ -11514,22 +11521,10 @@ int cpu_proc_num(void *cs_) {
 }
 
 
-uint64_t cpu_get_program_counter(void *cs_) {
-  CPUState *cs = (CPUState*)cs_;
-  CPUARMState *env_ptr = cs->env_ptr;
-  uint64_t pc;
-  if( env_ptr->aarch64 )
-    pc =  env_ptr->pc;
-  else {
-      assert(false);
-  }
 
-  return pc;
-
-}
 
 physical_address_t mmu_logical_to_physical(void *cs_, logical_address_t va) {
-  CPUState *cs = (CPUState*)cs_;
+//  CPUState *cs = (CPUState*)cs_;
 //  physical_address_t pa = cpu_get_phys_page_debug(cs, va);
 
         MemTxAttrs attrs = {};
