@@ -101,10 +101,11 @@ int save_vmstate_ext_test(Monitor *mon, const char *name);
 int incremental_load_vmstate_ext(const char *name, Monitor* mon);
 int create_tmp_overlay(void);
 int delete_tmp_overlay(void);
-void set_flexus_load_dir(const char* dir_name);
+
 #endif
 
 #ifdef CONFIG_FLEXUS
+void set_flexus_load_dir(const char* dir_name);
 void configure_flexus(QemuOpts *opts, Error **errp);
 const char* flexus_simulation_status(void);
 bool hasSimulator(void);
@@ -152,11 +153,13 @@ void flexus_writeConfiguration(const char *filename, Error **errp);
 void flexus_writeDebugConfiguration(Error **errp);
 void flexus_writeMeasurement(const char *measurement, const char *filename, Error **errp);
 void flexus_writeProfile(const char *filename, Error **errp);
-
-#ifdef CONFIG_EXTSNAP
+int flexus_in_timing(void);
+int flexus_in_trace(void);
 void flexus_doSave(const char* dir_name, Error **errp);
 void flexus_doLoad(const char* dir_name, Error **errp);
+#endif
 
+#ifdef CONFIG_EXTSNAP
 void configure_phases(QemuOpts *opts, Error **errp);
 void configure_ckpt(QemuOpts *opts, Error **errp);
 uint64_t get_phase_value(void);
@@ -177,31 +180,24 @@ void toggle_cont_request(void);
 void toggle_save_request(void);
 void set_base_ckpt_name(const char* str);
 const char* get_ckpt_name(void);
-int flexus_in_timing(void);
-int flexus_in_trace(void);
 uint64_t get_ckpt_interval(void);
 uint64_t get_ckpt_end(void);
 bool can_quit(void);
 void toggle_can_quit(void);
-#endif
 #endif
 
 #ifdef CONFIG_QUANTUM
 bool query_quantum_pause_state(void);
 void quantum_pause(void);
 void quantum_unpause(void);
-
 uint64_t* increment_total_num_instr(void);
-
 uint64_t query_total_num_instr(void);
 void set_total_num_instr(uint64_t val);
-
 uint64_t query_quantum_core_value(void);
 uint64_t query_quantum_record_value(void);
 uint64_t query_quantum_step_value(void);
 uint64_t query_quantum_node_value(void);
 const char* query_quantum_file_value(void);
-
 void set_quantum_value(uint64_t val);
 void set_quantum_record_value(uint64_t val);
 void set_quantum_node_value(uint64_t val);
@@ -209,10 +205,13 @@ void cpu_dbg(DbgDataAll *info);
 void cpu_zero_all(void);
 void configure_quantum(QemuOpts *opts, Error **errp);
 #endif
-#if defined (CONFIG_QUANTUM) || defined(CONFIG_FLEXUS)
-void processForOpts(uint64_t *val, const char* qopt, Error **errp);
+
+#if defined(CONFIG_QUANTUM) || defined(CONFIG_FLEXUS) || defined(CONFIG_EXTSNAP)
+ void processForOpts(uint64_t *val, const char* qopt, Error **errp);
 void processLetterforExponent(uint64_t *val, char c, Error **errp);
 #endif
+
+
 void qemu_announce_self(void);
 
 extern int autostart;

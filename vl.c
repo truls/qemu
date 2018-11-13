@@ -1436,7 +1436,7 @@ static void smp_parse(QemuOpts *opts)
         smp_cpus = cpus;
         smp_cores = cores;
         smp_threads = threads;
-#if CONFIG_FLEXUS
+#ifdef CONFIG_FLEXUS
         smp_sockets = sockets;
 #endif
     }
@@ -5094,7 +5094,6 @@ int main(int argc, char **argv, char **envp)
 #endif
 #ifdef CONFIG_EXTSNAP
 #ifdef CONFIG_FLEXUS
-
     if (phases_opts)
         configure_phases(phases_opts, &error_abort);
 
@@ -5108,7 +5107,9 @@ int main(int argc, char **argv, char **envp)
 	}
     }
     if (loadext) {
+#if defined (CONFIG_EXTSNAP) && defined (CONFIG_FLEXUS)
         set_base_ckpt_name(loadext);
+#endif
         if(incremental_load_vmstate_ext(loadext, NULL) < 0){
             fprintf(stdout, "External snapshot with args: %s, can not be loaded\n", loadext);
             exit(1);
@@ -5116,7 +5117,9 @@ int main(int argc, char **argv, char **envp)
     }
     else
     {
+#if defined (CONFIG_EXTSNAP) && defined (CONFIG_FLEXUS)
         set_base_ckpt_name("");
+#endif
     }
 #endif
 

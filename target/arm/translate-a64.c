@@ -11363,8 +11363,10 @@ static void disas_a64_insn(CPUARMState *env, DisasContext *s)
     gen_helper_quantum(cpu_env);
 #endif
 
-#ifdef CONFIG_FLEXUS
+#if defined (CONFIG_FLEXUS) && defined (CONFIG_EXTSNAP)
+    if (is_phases_enabled() || is_ckpt_enabled()) {
         gen_helper_phases(cpu_env);
+    }
 #endif
 
 

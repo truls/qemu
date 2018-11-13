@@ -54,14 +54,13 @@
 
 extern bool executed_once;
 
+#ifdef CONFIG_EXTSNAP
+#include <dirent.h>
+#endif
 
 #ifdef CONFIG_FLEXUS
 #include "../libqflex/flexus_proxy.h"
 #include "../libqflex/api.h"
-
-#ifdef CONFIG_EXTSNAP
-#include <dirent.h>
-#endif
 
 typedef enum simulation_mode{
     NONE,
@@ -69,9 +68,6 @@ typedef enum simulation_mode{
     TIMING,
     LASTMODE,
 }simulation_mode;
-
-
-
 static const char* simulation_mode_strings[] =
 {
 "NONE",
@@ -79,8 +75,6 @@ static const char* simulation_mode_strings[] =
 "TIMING",
 "LAST"
 };
-
-
 typedef struct flexus_state_t
 {
     simulation_mode mode;
@@ -92,23 +86,18 @@ typedef struct flexus_state_t
 
 }flexus_state_t;
 static flexus_state_t flexus_state;
-
 static void flexus_setUserPostLoadFile ( const char *file_name){
     simulator_config(file_name);
 }
-
 const char* flexus_simulation_status(void){
     return simulation_mode_strings[flexus_state.mode];
 }
-
 bool flexus_in_simulation(void){
     return flexus_in_timing() | flexus_in_trace();
 }
-
 bool hasSimulator(void){
     return flexus_state.simulator_obj != NULL;
 }
-
 void quitFlexus(void){
     if (flexus_in_simulation()) {
         if(hasSimulator())
@@ -150,7 +139,6 @@ void initFlexus(void){
         }
     }
 }
-
 void startFlexus(void){
     if (flexus_in_timing()) {
         if(hasSimulator())
@@ -161,7 +149,6 @@ void startFlexus(void){
         }
     }
 }
-
 void flexus_qmp(qmp_flexus_cmd_t cmd, const char* args, Error **errp){
     if (flexus_in_simulation()) {
         if(hasSimulator()){
@@ -178,17 +165,12 @@ void flexus_qmp(qmp_flexus_cmd_t cmd, const char* args, Error **errp){
 
     }
 }
-
-
-
 int flexus_in_timing(void){
     return flexus_state.mode == TIMING;
 }
-
 int flexus_in_trace(void){
     return flexus_state.mode == TRACE;
 }
-
 void flexus_addDebugCfg(const char *filename, Error **errp){
     flexus_qmp(QMP_FLEXUS_ADDDEBUGCFG, filename, errp);
 }
@@ -311,14 +293,10 @@ void flexus_writeMeasurement(const char *measurement, const char *filename, Erro
 void flexus_writeProfile(const char *filename, Error **errp){
     flexus_qmp(QMP_FLEXUS_WRITEPROFILE, filename, errp);
 }
-
-#ifdef CONFIG_EXTSNAP
 void flexus_doSave(const char *dir_name, Error **errp){
     flexus_qmp(QMP_FLEXUS_DOSAVE, dir_name, errp);
 
 }
-
-
 void flexus_doLoad(const char *dir_name, Error **errp){
     int file_count = 0;
     DIR * dirp;
@@ -335,7 +313,9 @@ void flexus_doLoad(const char *dir_name, Error **errp){
     if (file_count > 2) // might not be best
         flexus_qmp(QMP_FLEXUS_DOLOAD, dir_name, errp);
 }
+#endif
 
+#ifdef CONFIG_EXTSNAP
 typedef struct phases_state_t
 {
     uint64_t val;
@@ -343,7 +323,6 @@ typedef struct phases_state_t
     QLIST_ENTRY(phases_state_t) next;
 
 }phases_state_t;
-
 typedef struct ckpt_state_t{
     uint64_t ckpt_interval;
     uint64_t ckpt_end;
@@ -358,8 +337,6 @@ static char * phases_prefix;
 static char* snap_name;
 bool cont_requested, save_requested, quit_requested;
 static QLIST_HEAD(, phases_state_t) phases_head = QLIST_HEAD_INITIALIZER(phases_head);
-
-
 static int get_phase_id(void)
 {
     if (QLIST_EMPTY(&phases_head))
@@ -367,19 +344,16 @@ static int get_phase_id(void)
     phases_state_t *p = QLIST_FIRST(&phases_head);
     return p->id;
 }
-
 uint64_t get_phase_value(void){
     if (QLIST_EMPTY(&phases_head))
         assert(false);
     phases_state_t *p = QLIST_FIRST(&phases_head);
     return p->val;
 }
-
 static const char* get_phases_prefix(void)
 {
     return phases_prefix;
 }
-
 bool is_phases_enabled(void){
     return using_phases;
 }
@@ -391,7 +365,6 @@ bool phase_is_valid(void){
         return true;
     return false;
 }
-
 void set_base_ckpt_name(const char* str){
 
     if (strcmp(str,"")==0) {
@@ -404,7 +377,6 @@ void set_base_ckpt_name(const char* str){
         ckpt_state.base_snap_name = strdup(str);
     }
 }
-
 static const char* get_base_ckpt_name(void){
     return ckpt_state.base_snap_name;
 }
@@ -416,21 +388,18 @@ static void request_save(const char*str)
     set_snap_name(str);
     save_requested = true;
 }
-
 void save_ckpt(void){
 
     char* name = (char*)malloc(strlen(get_base_ckpt_name())+5*sizeof(char));
     sprintf(name, "%s_ckpt_%03d", get_base_ckpt_name(), ckpt_state.ckpt_id++);
     request_save(name);
 }
-
 void toggle_phases_creation(void){
     using_phases = !using_phases;
 }
 void toggle_ckpt_creation(void){
     using_ckpt = !using_ckpt;
 }
-
 void save_phase(void){
 
     char* name = (char*)malloc(strlen(get_phases_prefix())+4*sizeof(char));
@@ -446,49 +415,36 @@ uint64_t get_ckpt_end(void){
 const char* get_ckpt_name(void){
     return snap_name;
 }
-
-
-
-
 bool save_request_pending(void)
 {
     return save_requested;
 }
-
 void request_cont(void)
 {
     cont_requested = true;
 }
-
 void request_quit(void)
 {
     quit_requested = true;
 }
-
 bool quit_request_pending(void)
 {
     return quit_requested;
 }
-
 bool cont_request_pending(void)
 {
     return cont_requested;
 }
-
 void toggle_save_request(void)
 {
     save_requested = !save_requested;
 }
-
 void toggle_cont_request(void)
 {
     cont_requested = !cont_requested;
 }
-
-
-
 #endif
-#endif
+
 
 #ifdef CONFIG_QUANTUM
 
@@ -1188,14 +1144,10 @@ void cpu_ticks_init(void)
                                            cpu_throttle_timer_tick, NULL);
 }
 
-#if defined(CONFIG_QUANTUM) || defined(CONFIG_FLEXUS)
-
+#if defined(CONFIG_QUANTUM) || defined(CONFIG_FLEXUS) || defined(CONFIG_EXTSNAP)
 #define KIL 1E3
 #define MIL 1E6
 #define BIL 1E9
-
-
-
 void processLetterforExponent(uint64_t *val, char c, Error **errp)
 {
     switch(c){
@@ -1214,7 +1166,6 @@ void processLetterforExponent(uint64_t *val, char c, Error **errp)
         break;
     }
 }
-
 void processForOpts(uint64_t *val, const char* qopt, Error **errp)
 {
     size_t s = strlen(qopt);
@@ -1236,8 +1187,6 @@ void processForOpts(uint64_t *val, const char* qopt, Error **errp)
         *val = atoi(qopt);
     }
 }
-
-
 #endif
 
 #if defined(CONFIG_QUANTUM)
@@ -1351,20 +1300,6 @@ void configure_flexus(QemuOpts *opts, Error **errp)
     // trigger the periodic event
     QEMU_execute_callbacks(-1, 0, 0);
 }
-
-#endif
-#ifdef CONFIG_EXTSNAP
-
-void pop_phase(void)
-{
-    if (QLIST_EMPTY(&phases_head))
-        assert(false);
-    phases_state_t *p = QLIST_FIRST(&phases_head);
-    QLIST_REMOVE(p, next);
-
-}
-
-
 void set_flexus_load_dir(const char* dir_name){
     DIR* dir = opendir(dir_name);
     if (dir)
@@ -1382,7 +1317,17 @@ void set_flexus_load_dir(const char* dir_name){
         /* opendir() failed for some other reason. */
     }
 }
+#endif
 
+#ifdef CONFIG_EXTSNAP
+void pop_phase(void)
+{
+    if (QLIST_EMPTY(&phases_head))
+        assert(false);
+    phases_state_t *p = QLIST_FIRST(&phases_head);
+    QLIST_REMOVE(p, next);
+
+}
 void configure_phases(QemuOpts *opts, Error **errp)
 {
     const char* step_opt, *name_opt;
@@ -1420,7 +1365,6 @@ void configure_phases(QemuOpts *opts, Error **errp)
         }
     }
 }
-
 void configure_ckpt(QemuOpts *opts, Error **errp)
 {
     const char* every_opt, *end_opt;
@@ -2076,7 +2020,7 @@ const char* advance_qemu(void * obj){
     PTH_UPDATE_CONTEXT
     CPUState *cpu = PTH((CPUState *)obj);
     int ret = 0;
-    const char* rstr;
+    const char* rstr = "";
 
     while(!executed_once){
         if (cpu_can_run(cpu)) {

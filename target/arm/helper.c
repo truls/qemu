@@ -11762,11 +11762,13 @@ void helper_flexus_ld( CPUARMState *env,
   }        
   // Otherwise, RAM/ROM , physical memory space, io = 0
 
-  target_ulong phys_address;
+  target_ulong phys_address =   *((target_ulong*) tlb_vaddr_to_host(env, addr, 0, mmu_idx));
+
   // Getting page physical address
-  phys_address = env->tlb_table[mmu_idx][index].paddr;
+//  phys_address = env->tlb_table[mmu_idx][index].paddr;
+
   // Resolving physical address by adding offset inside the page
-  phys_address += addr & ~TARGET_PAGE_MASK;
+//  phys_address += addr & ~TARGET_PAGE_MASK;
 
   int asi = 0;
 #ifdef CONFIG_DEBUG_LIBQFLEX
@@ -11809,11 +11811,11 @@ void helper_flexus_st(
   }        
   // Otherwise, RAM/ROM , physical memory space, io = 0
 
-  target_ulong phys_address;
+  target_ulong phys_address =   *((target_ulong*) tlb_vaddr_to_host(env, addr, 0, mmu_idx));
   // Getting page physical address
-  phys_address = env->tlb_table[mmu_idx][index].paddr;
+//  phys_address = env->tlb_table[mmu_idx][index].paddr;
   // Resolving physical address by adding offset inside the page
-  phys_address += addr & ~TARGET_PAGE_MASK;
+//  phys_address += addr & ~TARGET_PAGE_MASK;
 
   int asi = 0;
 #ifdef CONFIG_DEBUG_LIBQFLEX
