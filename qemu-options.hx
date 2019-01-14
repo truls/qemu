@@ -3699,7 +3699,7 @@ ETEXI
 
 DEF("flexus", HAS_ARG, QEMU_OPTION_flexus,"-flexus [mode=@var{N}][,length=@var{V}][,simulator=@var{S}][,config=@var{C}]", QEMU_ARCH_ALL)
 STEXI
-@item -flexus [mode=@var{N}][,length=@var{V}][,simulator=@var{S}][,config=@var{C}]
+@item -flexus [mode=@var{N}][,length=@var{V}][,simulator=@var{S}][,config=@var{C}][,debug=@var{d}]
 @findex -flexus
 run flexus in timing or trace mode with given duration and simulator
 ETEXI

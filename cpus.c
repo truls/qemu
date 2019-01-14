@@ -83,6 +83,7 @@ typedef struct flexus_state_t
     const char * config_file; // user_postload
     simulator_obj_t* simulator_obj;
     const char* load_dir;
+    const char* debug_mode;
 
 }flexus_state_t;
 static flexus_state_t flexus_state;
@@ -118,6 +119,9 @@ void prepareFlexus(void){
             simulator_prepare();
             if (flexus_state.load_dir) {
                 flexus_doLoad(flexus_state.load_dir, NULL);
+            }
+            if (flexus_state.debug_mode) {
+                flexus_setDebug(flexus_state.debug_mode, NULL);
             }
         } else {
             fprintf(stderr, "no simulator object found!");
@@ -1245,11 +1249,13 @@ void configure_quantum(QemuOpts *opts, Error **errp)
 #ifdef CONFIG_FLEXUS
 void configure_flexus(QemuOpts *opts, Error **errp)
 {
-    const char* mode_opt, *length_opt, *simulator_opt, *config_opt;
+    const char* mode_opt, *length_opt, *simulator_opt, *config_opt,*debug_opt;
     mode_opt = qemu_opt_get(opts, "mode");
     length_opt = qemu_opt_get(opts, "length");
     simulator_opt = qemu_opt_get(opts, "simulator");
     config_opt = qemu_opt_get(opts, "config");
+    debug_opt = qemu_opt_get(opts, "debug");
+
 
     if (!mode_opt || !length_opt || !simulator_opt || !config_opt){
         error_setg(errp, "all flexus option need to be defined");
@@ -1293,6 +1299,17 @@ void configure_flexus(QemuOpts *opts, Error **errp)
     flexus_state.config_file = strdup(config_opt);
     if(! (access( flexus_state.config_file, F_OK ) != -1) ) {
         error_setg(errp, "no config file (user_postload) at this path %s\n", config_opt);
+    }
+
+    if (debug_opt){
+        char* tmp = strdup(debug_opt);
+        for (int i = 0; i < strlen(debug_opt); i++){
+            tmp[i] = tolower(debug_opt[i]);
+        }
+
+        flexus_state.debug_mode = strdup(tmp);
+
+        free(tmp);
     }
 
     initFlexus();

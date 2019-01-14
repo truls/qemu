@@ -569,6 +569,9 @@ static QemuOptsList qemu_flexus_opts = {
         }, {
             .name = "config",
             .type = QEMU_OPT_STRING,
+        }, {
+            .name = "debug",
+            .type = QEMU_OPT_STRING,
         },
         { /* end of list */ }
     },
