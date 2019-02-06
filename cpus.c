@@ -1256,19 +1256,28 @@ void configure_flexus(QemuOpts *opts, Error **errp)
     config_opt = qemu_opt_get(opts, "config");
     debug_opt = qemu_opt_get(opts, "debug");
 
-
-    if (!mode_opt || !length_opt || !simulator_opt || !config_opt){
-        error_setg(errp, "all flexus option need to be defined");
+    if (!mode_opt) {
+        error_setg(errp, "simulator mode needs to be defined");
     }
+    char* temp = strdup(mode_opt);
 
-    char* temp = (char*)malloc(sizeof(strlen(mode_opt)));
-    for (int i=0; i<strlen(mode_opt); i++)
-        temp[i]=tolower(mode_opt[i]);
-
-    if (strcmp(temp, "timing")){
+    if (strcmp(temp, "timing") == 0){
         flexus_state.mode = TIMING;
-    } else if (strcmp(temp, "trace")) {
+        if (!length_opt || !simulator_opt || !config_opt){
+            error_setg(errp, "all flexus option need to be defined");
+        }
+        processForOpts(&flexus_state.length, length_opt, errp);
+        if (flexus_state.length == 0) {
+            error_setg(errp, "undefined simulation length.");
+        }
+        QEMU_setSimulationTime(flexus_state.length);
+
+
+    } else if (strcmp(temp, "trace")== 0) {
         flexus_state.mode = TRACE;
+        if (!simulator_opt || !config_opt){
+            error_setg(errp, "all flexus option need to be defined");
+        }
     } else {
         error_setg(errp, "undefined simulation mode. currently only trace and timing are supported.");
     }
@@ -1277,12 +1286,8 @@ void configure_flexus(QemuOpts *opts, Error **errp)
     QEMU_initialize((flexus_state.mode == TIMING) ? true : false);
     free(temp);
 
-    processForOpts(&flexus_state.length, length_opt, errp);
-    if (flexus_state.length == 0) {
-        error_setg(errp, "undefined simulation length.");
-    }
 
-    QEMU_setSimulationTime(flexus_state.length);
+
 
     flexus_state.simulator = strdup(simulator_opt);
     if( access( flexus_state.simulator, F_OK ) != -1 ) {

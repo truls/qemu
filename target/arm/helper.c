@@ -67,6 +67,10 @@ const char* qemu_dump_state(void *obj){
 const char* disassemble(void* cpu, uint64_t pc){
     CPUState *cs = (CPUState*)cpu;
 
+    if (pc == 0){
+        CPUARMState* env = cs->env_ptr;
+        pc = env->pc;
+    }
     FILE * fp;
     fp = fopen ("disas-temp.txt", "w+");
     target_disas(fp, cs, pc, 4, 2);
@@ -104,7 +108,6 @@ const char* disassemble(void* cpu, uint64_t pc){
 
 uint64_t cpu_get_pending_interrupt( void * obj) {
     CPUState *cs = (CPUState*)obj;
-    return 0;
     uint64_t ret = 0;
 
     if (cs->interrupt_request & CPU_INTERRUPT_HARD) {
@@ -119,8 +122,7 @@ uint64_t cpu_get_pending_interrupt( void * obj) {
 
 uint64_t cpu_get_program_counter(void *cs_) {
     CPUState* cs = (CPUState*)cs_;
-    ARMCPU *cpu = ARM_CPU(cs);
-    CPUARMState *env = &cpu->env;
+    CPUARMState *env = cs->env_ptr;
     return env->pc;
 }
 
@@ -11811,7 +11813,25 @@ void helper_flexus_st(
   }        
   // Otherwise, RAM/ROM , physical memory space, io = 0
 
-  target_ulong phys_address =   *((target_ulong*) tlb_vaddr_to_host(env, addr, 0, mmu_idx));
+//  target_ulong phys_address =   *((target_ulong*) tlb_vaddr_to_host(env, addr, 0, mmu_idx));
+  MemTxAttrs attrs = {};
+  hwaddr phys_addr;
+  target_ulong page_size;
+  int prot;
+  bool ret;
+  uint32_t fsr;
+  ARMMMUFaultInfo fi = {};
+  ARMMMUIdx mmu_idx2 = core_to_arm_mmu_idx(env, cpu_mmu_index(env, false));
+
+  ret = get_phys_addr(env, addr, 0, mmu_idx2, &phys_addr,
+                      &attrs, &prot, &page_size, &fsr, &fi);
+
+  if (ret) {
+      assert(false);
+  }
+
+  target_ulong phys_address = phys_addr;
+
   // Getting page physical address
 //  phys_address = env->tlb_table[mmu_idx][index].paddr;
   // Resolving physical address by adding offset inside the page
