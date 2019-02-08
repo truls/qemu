@@ -669,7 +669,7 @@ static inline bool cpu_handle_interrupt(CPUState *cpu,
     return false;
 }
 
-static inline void cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
+static inline bool cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
                                     TranslationBlock **last_tb, int *tb_exit)
 {
     uintptr_t ret;
@@ -681,7 +681,7 @@ static inline void cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
     *tb_exit = ret & TB_EXIT_MASK;
     if (*tb_exit != TB_EXIT_REQUESTED) {
         *last_tb = tb;
-        return;
+        return true;
     }
 
     *last_tb = NULL;
@@ -697,7 +697,7 @@ static inline void cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
          * or cpu->interrupt_request.
          */
         smp_mb();
-        return;
+        return false;
     }
 
     /* Instruction counter expired.  */
@@ -718,12 +718,14 @@ static inline void cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
         }
     }
 #endif
+    return true;
 }
 
 /* main execution loop */
 
 int cpu_exec(CPUState *cpu)
 {
+    static bool properly_executed = false;
     PTH_UPDATE_CONTEXT
 
     CPUClass *cc = CPU_GET_CLASS(cpu);
@@ -777,22 +779,25 @@ int cpu_exec(CPUState *cpu)
         ret = cpu->interrupt_request;
     }
     /* if an exception is pending, we execute it here */
-    while (!cpu_handle_exception(cpu, &ret)&& FLEXUS_TIMING_LOOP_CHECK()) {
+    while ((!cpu_handle_exception(cpu, &ret)&& FLEXUS_TIMING_LOOP_CHECK()) || !properly_executed) {
         TranslationBlock *last_tb = NULL;
         int tb_exit = 0;
 
 
 
-        while (!cpu_handle_interrupt(cpu, &last_tb) && FLEXUS_TIMING_LOOP_CHECK()) {
+        while ((!cpu_handle_interrupt(cpu, &last_tb) && FLEXUS_TIMING_LOOP_CHECK()) || !properly_executed ) {
                         CHECK_LOOP(cpu, iloop)
             TranslationBlock *tb = tb_find(cpu, last_tb, tb_exit);
-            cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);
+            properly_executed = cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);
             /* Try to align the host and virtual clocks
                if the guest is in advance */
             align_clocks(&sc, cpu);
             FLEXUS_TIMING_LOOP_FLIP();
+            break;
         }
     }
+    properly_executed = false;
+
 
     cc->cpu_exec_exit(cpu);
     rcu_read_unlock();

@@ -11322,6 +11322,8 @@ static void disas_a64_insn(CPUARMState *env, DisasContext *s)
     s->insn = insn;
     s->pc += 4;
 
+    printf("BEFORE PC = %ul\n",env->pc);
+
     s->fp_access_checked = false;
 
     switch (extract32(insn, 25, 4)) {
@@ -11370,6 +11372,11 @@ static void disas_a64_insn(CPUARMState *env, DisasContext *s)
 #endif
 
 
+    uint64_t t = s->pc;
+    env->pc = 0;
+    printf("AFTER PC = %ul\n",env->pc);
+
+//    cpu_set_program_counter(env, s->pc);
     /* if we allocated any temporaries, free them here */
     free_tmp_a64(s);
 }

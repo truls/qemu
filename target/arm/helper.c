@@ -110,13 +110,17 @@ uint64_t cpu_get_pending_interrupt( void * obj) {
     CPUState *cs = (CPUState*)obj;
     uint64_t ret = 0;
 
-    if (cs->interrupt_request & CPU_INTERRUPT_HARD) {
-        ret |= CPSR_I;
-    }
-    if (cs->interrupt_request & CPU_INTERRUPT_FIQ) {
-        ret |= CPSR_F;
-    }
+    ARMCPU *cpu = ARM_CPU(cs);
+
+    ret = (cpu->power_state != PSCI_OFF)
+            && (  CPU_INTERRUPT_FIQ | CPU_INTERRUPT_HARD
+                | CPU_INTERRUPT_VFIQ | CPU_INTERRUPT_VIRQ
+                | CPU_INTERRUPT_EXITTB);
     /* External aborts are not possible in QEMU so A bit is always clear */
+
+    if (! arm_excp_unmasked(cs, EXCP_IRQ, 1)){
+        ret = 0;
+    }
     return ret;
 }
 
@@ -125,6 +129,14 @@ uint64_t cpu_get_program_counter(void *cs_) {
     CPUARMState *env = cs->env_ptr;
     return env->pc;
 }
+
+
+//void cpu_set_program_counter(void *cs_, uint64_t aVal) {
+//    CPUARMState* env = (CPUARMState*)cs_;
+//    env->pc = aVal;
+//    printf("AFTER PC = %ul\n",env->pc);
+
+//}
 
 
 bool cpu_is_idle(void* obj)
