@@ -22,45 +22,45 @@
 #include "../libqflex/api.h"
 #include "disas/disas.h"
 
+#include <stdio.h>
+#include <string.h>
 
+static void qemu_dump_cpu(CPUState *cs, char ** str){
+    char * f = *str;
+    ARMCPU *cpu = ARM_CPU(cs);
+    CPUARMState *env = &cpu->env;
+    uint32_t psr = pstate_read(env);
+    int i;
+    int el = arm_current_el(env);
+    const char *ns_status;
 
-const char* qemu_dump_state(void *obj){
+    f += sprintf(f, "PC=%016"PRIx64"  SP=%016"PRIx64"\n",
+            env->pc, env->xregs[31]);
+    for (i = 0; i < 31; i++) {
+        f += sprintf(f, "X%02d=%016"PRIx64, i, env->xregs[i]);
+        if ((i % 4) == 3) {
+            f += sprintf(f, "\n");
+        } else {
+            f += sprintf(f, " ");
+        }
+    }
 
+    ns_status = "";
+
+    f += sprintf(f, "\nPSTATE=%08x %c%c%c%c %sEL%d%c\n",
+                psr,
+                psr & PSTATE_N ? 'N' : '-',
+                psr & PSTATE_Z ? 'Z' : '-',
+                psr & PSTATE_C ? 'C' : '-',
+                psr & PSTATE_V ? 'V' : '-',
+                ns_status,
+                el,
+                psr & PSTATE_SP ? 'h' : 't');
+}
+
+void qemu_dump_state(void *obj, char** buf){
     CPUState *cpu = (CPUState*)obj;
-
-    FILE * fp;
-    fp = fopen ("qemu-dump-temp.txt", "w+");
-    cpu_dump_state(cpu, fp, fprintf, CPU_DUMP_FPU);
-    fclose(fp);
-
-    char * buffer = 0;
-    long length;
-    FILE * f = fopen ("qemu-dump-temp.txt", "rb");
-
-    if (f)
-    {
-      fseek (f, 0, SEEK_END);
-      length = ftell (f);
-      fseek (f, 0, SEEK_SET);
-      buffer = malloc (length);
-      if (buffer)
-      {
-        fread (buffer, 1, length, f);
-      }
-      fclose (f);
-    }
-
-    if (buffer){
-      return buffer;
-    } else {
-        assert(false);
-    }
-
-    int r = remove("qemu-dump-temp.txt");
-    if (r != 0) {
-        assert(false);
-    }
-
+    qemu_dump_cpu(cpu, buf);
 }
 
 
