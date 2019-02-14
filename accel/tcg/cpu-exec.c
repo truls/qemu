@@ -73,7 +73,7 @@ static int iExit;
 #endif
 #ifdef CONFIG_FLEXUS
 static bool timing_once = false;
-
+static bool timing_exec = false;
 static bool check_timing_loop_limit(void)
 {
     if (flexus_in_timing())
@@ -82,6 +82,27 @@ static bool check_timing_loop_limit(void)
         return false;
 }
 
+static bool check_timing_exec(void)
+{
+    if (flexus_in_timing())
+        return !timing_exec;
+    else
+        return false;
+}
+#define FLEXUS_TIMING_TOGGLE_EXEC() do {if (flexus_in_timing()) timing_exec = false;} while(0)
+#define FLEXUS_TIMING_UPDATE_EXEC(word) \
+    do{ \
+    if (flexus_in_timing()){   \
+        timing_exec = word; }\
+    else { \
+        word; \
+    } \
+        } while(0)
+
+#define FLEXUS_IN_TIMING(word) do {if (flexus_in_timing()) word;} while(0)
+
+#define FLEXUS_TIMING_EXEC_CHECK() \
+        check_timing_exec()
 #define FLEXUS_TIMING_LOOP_CHECK() \
         !check_timing_loop_limit()
 
@@ -101,6 +122,11 @@ static bool check_timing_loop_limit(void)
 #define FLEXUS_TIMING_LOOP_CHECK() 1
 #define FLEXUS_TIMING_LOOP_FLIP()
 #define FLEXUS_TIMING_LOOP_INIT()
+
+#define FLEXUS_TIMING_EXEC_CHECK() 0
+#define FLEXUS_TIMING_UPDATE_EXEC(word) word
+#define FLEXUS_TIMING_TOGGLE_EXEC()
+#define FLEXUS_IN_TIMING(word)
 #endif
 /* -icount align implementation. */
 
@@ -669,7 +695,12 @@ static inline bool cpu_handle_interrupt(CPUState *cpu,
     return false;
 }
 
-static inline bool cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
+#ifdef CONFIG_FLEXUS
+static inline bool
+#else
+static inline void
+#endif
+cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
                                     TranslationBlock **last_tb, int *tb_exit)
 {
     uintptr_t ret;
@@ -681,7 +712,11 @@ static inline bool cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
     *tb_exit = ret & TB_EXIT_MASK;
     if (*tb_exit != TB_EXIT_REQUESTED) {
         *last_tb = tb;
+#ifdef CONFIG_FLEXUS
         return true;
+#else
+        return;
+#endif
     }
 
     *last_tb = NULL;
@@ -697,7 +732,11 @@ static inline bool cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
          * or cpu->interrupt_request.
          */
         smp_mb();
+#ifdef CONFIG_FLEXUS
         return false;
+#else
+        return;
+#endif
     }
 
     /* Instruction counter expired.  */
@@ -718,14 +757,17 @@ static inline bool cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
         }
     }
 #endif
+#ifdef CONFIG_FLEXUS
     return true;
+#else
+    return;
+#endif
 }
 
 /* main execution loop */
 
 int cpu_exec(CPUState *cpu)
 {
-    static bool properly_executed = false;
     PTH_UPDATE_CONTEXT
 
     CPUClass *cc = CPU_GET_CLASS(cpu);
@@ -779,24 +821,24 @@ int cpu_exec(CPUState *cpu)
         ret = cpu->interrupt_request;
     }
     /* if an exception is pending, we execute it here */
-    while ((!cpu_handle_exception(cpu, &ret)&& FLEXUS_TIMING_LOOP_CHECK()) || !properly_executed) {
+    while ((!cpu_handle_exception(cpu, &ret)&& FLEXUS_TIMING_LOOP_CHECK()) || FLEXUS_TIMING_EXEC_CHECK()) {
         TranslationBlock *last_tb = NULL;
         int tb_exit = 0;
 
 
 
-        while ((!cpu_handle_interrupt(cpu, &last_tb) && FLEXUS_TIMING_LOOP_CHECK()) || !properly_executed ) {
+        while ((!cpu_handle_interrupt(cpu, &last_tb) && FLEXUS_TIMING_LOOP_CHECK()) || FLEXUS_TIMING_EXEC_CHECK() ) {
                         CHECK_LOOP(cpu, iloop)
             TranslationBlock *tb = tb_find(cpu, last_tb, tb_exit);
-            properly_executed = cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);
+            FLEXUS_TIMING_UPDATE_EXEC(cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit));
             /* Try to align the host and virtual clocks
                if the guest is in advance */
             align_clocks(&sc, cpu);
             FLEXUS_TIMING_LOOP_FLIP();
-            break;
+            FLEXUS_IN_TIMING(break);
         }
     }
-    properly_executed = false;
+    FLEXUS_TIMING_TOGGLE_EXEC();
 
 
     cc->cpu_exec_exit(cpu);
