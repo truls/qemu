@@ -106,21 +106,70 @@ const char* disassemble(void* cpu, uint64_t pc){
 }
 
 
-uint64_t cpu_get_pending_interrupt( void * obj) {
-    CPUState *cs = (CPUState*)obj;
-    uint64_t ret = 0;
+//uint64_t cpu_get_pending_interrupt( void * obj) {
+//    CPUState *cs = (CPUState*)obj;
+//    uint64_t ret = 0;
 
+//    ARMCPU *cpu = ARM_CPU(cs);
+
+//    ret = (cpu->power_state != PSCI_OFF)
+//            && (  CPU_INTERRUPT_FIQ | CPU_INTERRUPT_HARD
+//                | CPU_INTERRUPT_VFIQ | CPU_INTERRUPT_VIRQ
+//                | CPU_INTERRUPT_EXITTB);
+//    /* External aborts are not possible in QEMU so A bit is always clear */
+
+//    if (! arm_excp_unmasked(cs, EXCP_IRQ, 1)){
+//        ret = 0;
+//    }
+//    return ret;
+//}
+
+
+uint64_t cpu_get_pending_interrupt( void * obj) {
+
+    CPUState *cs = (CPUState*)obj;
+    int interrupt_request = cs->interrupt_request;
+    CPUARMState *env = cs->env_ptr;
+    uint32_t cur_el = arm_current_el(env);
+    bool secure = arm_is_secure(env);
+    uint32_t target_el;
+    uint32_t excp_idx;
+    int ret = 0;
     ARMCPU *cpu = ARM_CPU(cs);
 
-    ret = (cpu->power_state != PSCI_OFF)
-            && (  CPU_INTERRUPT_FIQ | CPU_INTERRUPT_HARD
-                | CPU_INTERRUPT_VFIQ | CPU_INTERRUPT_VIRQ
-                | CPU_INTERRUPT_EXITTB);
-    /* External aborts are not possible in QEMU so A bit is always clear */
-
-    if (! arm_excp_unmasked(cs, EXCP_IRQ, 1)){
-        ret = 0;
+    if (interrupt_request & CPU_INTERRUPT_FIQ) {
+        excp_idx = EXCP_FIQ;
+        target_el = arm_phys_excp_target_el(cs, excp_idx, cur_el, secure);
+        if (arm_excp_unmasked(cs, excp_idx, target_el)) {
+            ret = 1;
+        }
     }
+    if (interrupt_request & CPU_INTERRUPT_HARD) {
+        excp_idx = EXCP_IRQ;
+        target_el = arm_phys_excp_target_el(cs, excp_idx, cur_el, secure);
+        if (arm_excp_unmasked(cs, excp_idx, target_el)) {
+            ret = 2;
+        }
+    }
+    if (interrupt_request & CPU_INTERRUPT_VIRQ) {
+        excp_idx = EXCP_VIRQ;
+        target_el = 1;
+        if (arm_excp_unmasked(cs, excp_idx, target_el)) {
+            ret = 3;
+        }
+    }
+    if (interrupt_request & CPU_INTERRUPT_VFIQ) {
+        excp_idx = EXCP_VFIQ;
+        target_el = 1;
+        if (arm_excp_unmasked(cs, excp_idx, target_el)) {
+            ret = 4;
+        }
+    }
+
+    if (ret != 0){
+        int y = 0;
+    }
+
     return ret;
 }
 
