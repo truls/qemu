@@ -505,24 +505,15 @@ end:
     return ret;
 }
 
-static int load_state_ext(const char *name)
+static int load_state_ext(QString *dir_path)
 {
     QEMUFile *f;
     int ret = -EINVAL;
     char command[NAME_MAX] = {};
-    QString *dir_path;
     Error *local_err = NULL;
     MigrationIncomingState *mis = migration_incoming_get_current();
 
-    BlockDriverState *base = find_active();
-    if (base == NULL) {
-        error_report("There is no base image");
-        return ret;
-    }
-
-    dir_path = get_dir_path();
-
-    sprintf(command, "%s %s/%s/mem", input_command, dir_path->string, name);
+    sprintf(command, "%s %s/mem", input_command, dir_path->string);
     const char *argv[] = { "/bin/sh", "-c", command, NULL };
 
     QIOChannel *ioc;
@@ -530,7 +521,6 @@ static int load_state_ext(const char *name)
                                                     O_RDONLY,
                                                     &local_err));
     qio_channel_set_name(ioc, "loadvm-exec-incoing");
-
     if (!ioc) {
         error_report("Could not open VM state file's channel\n");
         goto end;
@@ -549,21 +539,17 @@ static int load_state_ext(const char *name)
     migration_incoming_state_destroy();
     if (ret < 0) {
         error_report("Error %d while loading vm state", ret);
-        return ret;
+        goto end;
     }
-  
+
     return 0;
 end:
-    QDECREF(dir_path);
     return ret;
 }
 
 int incremental_load_vmstate_ext (const char *name, Monitor *mon) {
     int saved_vm_running  = runstate_is_running();
     int ret = -EINVAL;
-    QList *snap_chain = NULL;
-    QString *cur = NULL;
-    const char *cur_name = NULL;
 
     if (saved_vm_running) {
         vm_stop(RUN_STATE_RESTORE_VM);
@@ -576,6 +562,7 @@ int incremental_load_vmstate_ext (const char *name, Monitor *mon) {
         ret = -ENODEV;
         goto end;
     }
+    QDECREF(dir_path);
 
     ret = goto_snap(name);
     if (ret < 0) {
@@ -590,51 +577,38 @@ int incremental_load_vmstate_ext (const char *name, Monitor *mon) {
         goto end;
     }
 
-    snap_chain = get_snap_chain(bs);
+    // Incremental snapshots
+    // Make QList of QStrings with backtracking of snapshot directories
+    QList *snap_chain = get_snap_chain(bs);
     if (bs == NULL) {
         monitor_printf(mon, "Cannot build snapshot chain on current VM\n");
         ret = -EINVAL;
         goto end;
     }
-
     bdrv_drain_all();
-
-    cur = qobject_to_qstring(qlist_pop(snap_chain));
-    if (cur == NULL) {
-        monitor_printf(mon, "The chain is empty\n");
+    if (qlist_empty(snap_chain)) {
+        monitor_printf(mon, "The snapshot chain is empty\n");
         ret = -EINVAL;
         goto end;
     }
 
-    while (cur) {
-//        cur_name = get_snap_name(cur->string);
-        int pos = (strlen(cur->string) - (strlen(cur->string) - strlen(dir_path->string))  + 1);
-	if (pos <= 0 ) {
-		monitor_printf(mon, "bad snap name\n");
-		goto end;	
-	}
-        cur_name = &cur->string[pos];
-        if (cur_name == NULL) {
-            monitor_printf(mon, "Cannot load snapshot %s\n", name);
-            ret = -EINVAL;
-            goto end;
-        }
-
+    // Load incrementally snapshots
+    QString *path = NULL;
+    while ((path = qobject_to_qstring(qlist_pop(snap_chain))) != NULL) {
         vm_start();
         vm_stop(RUN_STATE_RESTORE_VM);
 
-        ret = load_state_ext(cur_name);
+        ret = load_state_ext(path);
         if (ret < 0) {
-            monitor_printf(mon, "Cannot load memory for snapshot %s\n", name);
+            monitor_printf(mon, "Cannot load memory for snapshot located in %s\n", path->string);
             goto end;
         }
 
 #ifdef CONFIG_FLEXUS
-        set_flexus_load_dir(cur->string);
+        set_flexus_load_dir(path->string);
 #endif
 
-        QDECREF(cur);
-        cur = qobject_to_qstring(qlist_pop(snap_chain));
+        QDECREF(path);
     }
 
 end:
@@ -644,7 +618,6 @@ end:
     if (snap_chain != NULL) {
         qlist_destroy_obj(QOBJECT(snap_chain));
     }
-    QDECREF(dir_path);
     return ret;
 }
 
