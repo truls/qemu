@@ -829,7 +829,20 @@ int cpu_exec(CPUState *cpu)
 
         while ((!cpu_handle_interrupt(cpu, &last_tb) && FLEXUS_TIMING_LOOP_CHECK()) || FLEXUS_TIMING_EXEC_CHECK() ) {
                         CHECK_LOOP(cpu, iloop)
-            TranslationBlock *tb = tb_find(cpu, last_tb, tb_exit);
+            TranslationBlock *tb;
+            if(flexus_in_simulation()){
+                CPUArchState *env = (CPUArchState *)cpu->env_ptr;
+                target_ulong cs_base, pc;
+                uint32_t flags;
+                cpu_get_tb_cpu_state(env, &pc, &cs_base, &flags);
+                mmap_lock();
+                tb_lock();
+                tb = tb_gen_code(cpu, pc, cs_base, flags, 0);
+                tb_unlock();
+                mmap_unlock();
+            } else{
+            tb = tb_find(cpu, last_tb, tb_exit);
+            }
             FLEXUS_TIMING_UPDATE_EXEC(cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit));
             /* Try to align the host and virtual clocks
                if the guest is in advance */
