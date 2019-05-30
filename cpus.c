@@ -1901,6 +1901,75 @@ static int qflex_tcg_cpu_exec(CPUState *cpu, QFlexExecType_t type)
     return ret;
 }
 
+static int qflex_cpu_step(CPUState *cpu, QFlexExecType_t type)
+{
+    int r = 0;
+    if (cpu_can_run(cpu)) {
+        r = qflex_tcg_cpu_exec(cpu, type);
+        switch (r) {
+        case EXCP_DEBUG:
+            cpu_handle_guest_debug(cpu);
+            break;
+        case EXCP_HALTED:
+            /* during start-up the vCPU is reset and the thread is
+             * kicked several times. If we don't ensure we go back
+             * to sleep in the halted state we won't cleanly
+             * start-up when the vCPU is enabled.
+             *
+             * cpu->halted should ensure we sleep in wait_io_event
+             */
+            g_assert(cpu->halted);
+            break;
+        case EXCP_ATOMIC:
+            qemu_mutex_unlock_iothread();
+            cpu_exec_step_atomic(cpu);
+            qemu_mutex_lock_iothread();
+        default:
+            /* Ignore everything else? */
+            break;
+        }
+    } else if (cpu->unplug) {
+        qemu_tcg_destroy_vcpu(cpu);
+        cpu->created = false;
+        qemu_cond_signal(&qemu_cpu_cond);
+        qemu_mutex_unlock_iothread();
+        /* tcg_cpu_exec() output is defined in cpu-all.h
+         * if qflex needs to check for unplugged cpu
+         * catch qflex defined number
+         */
+        r = 0x3F00D; // Random assigned number for now
+    }
+    atomic_mb_set(&cpu->exit_request, 0);
+    qemu_tcg_wait_io_event(cpu);
+
+    return r;
+}
+
+static void qflex_prologue(CPUState *cpu) {
+    qflex_api_values_init(cpu);
+    qflex_log_mask(QFLEX_LOG_GENERAL,
+                   "QFLEX: PROLOGUE START\n"
+                   "    -> Skips initial snapshot load long interrupt routine to normal user program\n");
+    while(!qflex_is_prologue_done()) {
+        qflex_cpu_step(cpu, PROLOGUE);
+    }
+    qflex_log_mask(QFLEX_LOG_GENERAL, "QFLEX: PROLOGUE END\n");
+}
+
+int advance_qemu(void * obj){
+    PTH_UPDATE_CONTEXT
+    CPUState *cpu = PTH((CPUState *)obj);
+    int ret = 0;
+    while(!qflex_is_inst_done()) {
+        ret = qflex_cpu_step(cpu, SINGLESTEP);
+    }
+    qflex_update_inst_done(false);
+    return ret;
+}
+
+#endif /* CONFIG_FLEXUS */
+
+
 /* Destroy any remaining vCPUs which have been unplugged and have
  * finished running
  */
@@ -1917,68 +1986,6 @@ static void deal_with_unplugged_cpus(void)
         }
     }
 }
-
-#ifdef CONFIG_FLEXUS
-const char* advance_qemu(void * obj){
-    PTH_UPDATE_CONTEXT
-    CPUState *cpu = PTH((CPUState *)obj);
-    int ret = 0;
-    const char* rstr = "";
-
-    while(!executed_once){
-        if (cpu_can_run(cpu)) {
-            ret = tcg_cpu_exec(cpu);
-            switch (ret) {
-            case EXCP_DEBUG:
-                cpu_handle_guest_debug(cpu);
-                rstr = "EXCP_DEBUG";
-                break;
-            case EXCP_HALTED:
-                rstr = "EXCP_HALTED";
-
-                /* during start-up the vCPU is reset and the thread is
-                 * kicked several times. If we don't ensure we go back
-                 * to sleep in the halted state we won't cleanly
-                 * start-up when the vCPU is enabled.
-                 *
-                 * cpu->halted should ensure we sleep in wait_io_event
-                 */
-                g_assert(cpu->halted);
-                break;
-            case EXCP_ATOMIC:
-                rstr = "EXCP_ATOMIC";
-
-                qemu_mutex_unlock_iothread();
-                cpu_exec_step_atomic(cpu);
-                qemu_mutex_lock_iothread();
-            default:
-                rstr = "DEFAULT";
-
-                /* Ignore everything else? */
-                break;
-            }
-        } else if (cpu->unplug) {
-            qemu_tcg_destroy_vcpu(cpu);
-            cpu->created = false;
-            qemu_cond_signal(&qemu_cpu_cond);
-            qemu_mutex_unlock_iothread();
-            rstr = "CPU UNPLUG";
-            return rstr;
-        }
-        else
-        {
-            rstr = "CPU ?";
-            return rstr;
-
-        }
-
-        atomic_mb_set(&cpu->exit_request, 0);
-        qemu_tcg_wait_io_event(cpu);
-    }
-    executed_once = false;
-    return rstr;
-}
-#endif
 
 /* Single-threaded TCG
  *
@@ -2024,13 +2031,17 @@ static void *qemu_tcg_rr_cpu_thread_fn(void *arg)
 
     /* process any pending work */
     cpu->exit_request = 1;
+
 #ifdef CONFIG_FLEXUS
     if (flexus_state.mode == TIMING){
-        printf("QEMU: Starting timing simulation. Passing control to Flexus.\n");
+        qflex_log_mask_enable(QFLEX_LOG_GENERAL);
+        qflex_prologue(cpu);
+        qflex_log_mask(QFLEX_LOG_GENERAL, "QFLEX: TIMING START\n"
+                                          "    -> Starting timing simulation. Passing control to Flexus.\n");
         startFlexus();
         return NULL;
     }
-#endif
+#endif /* CONFIG_FLEXUS */
     while (1) {
         /* Account partial waits to QEMU_CLOCK_VIRTUAL.  */
         qemu_account_warp_timer();
