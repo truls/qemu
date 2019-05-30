@@ -16,17 +16,19 @@
 #include "exec/semihost.h"
 #include "sysemu/kvm.h"
 
-//#define PRINT_MMU_STAGES
+#ifdef CONFIG_FLEXUS
+#include "qflex/qflex.h"
+#endif /* CONFIG_FLEXUS */
 
-#if defined(CONFIG_FLEXUS)
+#ifdef CONFIG_FLEXUS
 #include "../libqflex/api.h"
 #include "disas/disas.h"
 
 #include <stdio.h>
 #include <string.h>
 
-static void qemu_dump_cpu(CPUState *cs, char ** str){
-    char * f = *str;
+static void qemu_dump_cpu(CPUState *cs, char** str){
+    char *f = *str;
     ARMCPU *cpu = ARM_CPU(cs);
     CPUARMState *env = &cpu->env;
     uint32_t psr = pstate_read(env);

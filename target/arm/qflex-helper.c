@@ -4,12 +4,12 @@
 #include "exec/log.h"
 
 #include "qflex/qflex-log.h"
-#include "qflex/qflex-api.h"
+#include "qflex/qflex.h"
 
 /* TCG helper functions. (See exec/helper-proto.h  and target/arch/helper.h)
    This one expands prototypes for the helper functions.  */
 
-#if defined(CONFIG_FA_QFLEX) || defined(CONFIG_FLEXUS)
+#if defined(CONFIG_FLEXUS)
 /**
  * @brief HELPER(qflex_executed_instruction)
  * location: location of the gen_helper_ in the transalation.
@@ -69,5 +69,5 @@ void HELPER(qflex_magic_insn)(int nop_op) {
  * For the moment not needed.
  */
 void HELPER(qflex_exception_return)(CPUARMState *env) { return; }
-#endif /* CONFIG_FA_QFLEX */ /* CONFIG_FLEXUS */
+#endif /* CONFIG_FLEXUS */
 
