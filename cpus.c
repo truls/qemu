@@ -84,7 +84,6 @@ typedef struct flexus_state_t {
 }flexus_state_t;
 
 static flexus_state_t flexus_state;
-extern bool executed_once;
 
 int flexus_in_timing(void){ return flexus_state.mode == TIMING; }
 int flexus_in_trace(void) { return flexus_state.mode == TRACE; }

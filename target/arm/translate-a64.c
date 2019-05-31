@@ -40,6 +40,7 @@
 #ifdef CONFIG_FLEXUS
 #include "include/sysemu/sysemu.h"
 #include "../libqflex/api.h"
+#include "qflex/qflex.h"
 static target_ulong flexus_ins_pc = -1;
 
 #define FLEXUS_IF_IN_SIMULATION( a ) do {	\
@@ -11319,8 +11320,18 @@ static void disas_a64_insn(CPUARMState *env, DisasContext *s)
     uint32_t insn;
 
     insn = arm_ldl_code(env, s->pc, s->sctlr_b);
+
     s->insn = insn;
     s->pc += 4;
+
+#if defined(CONFIG_FLEXUS)
+    if( flexus_in_timing() ) {
+        uint64_t pc = s->base.pc_first;
+        uint32_t flags = 4 | (bswap_code(s->sctlr_b) ? 2 : 0);
+        gen_helper_qflex_executed_instruction(cpu_env, tcg_const_i64(pc), tcg_const_i32(flags),
+                                              tcg_const_i32(QFLEX_EXEC_IN));
+    }
+#endif
 
     s->fp_access_checked = false;
 
@@ -11483,6 +11494,7 @@ static void aarch64_tr_translate_insn(DisasContextBase *dcbase, CPUState *cpu)
 {
     DisasContext *dc = container_of(dcbase, DisasContext, base);
     CPUARMState *env = cpu->env_ptr;
+
 
     if (dc->ss_active && !dc->pstate_ss) {
         /* Singlestep state is Active-pending.

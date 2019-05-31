@@ -29,13 +29,14 @@ void HELPER(qflex_executed_instruction)(CPUARMState* env, uint64_t pc, int flags
             log_target_disas(cs, pc, 4, flags);
             qemu_log_unlock();
         }
-        qflex_update_inst_done(true); break;
+        qflex_update_inst_done(true);
         break;
     case QFLEX_EXEC_OUT:
         if((unlikely(qflex_loglevel_mask(QFLEX_LOG_KERNEL_EXEC)) && cur_el != 0)
                 || (unlikely(qflex_loglevel_mask(QFLEX_LOG_USER_EXEC)) && cur_el == 0)) {
             qemu_log("OUT :0x%016lx\n", pc);
         }
+        break;
     default: break;
     }
 }

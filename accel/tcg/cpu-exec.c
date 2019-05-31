@@ -857,6 +857,7 @@ static inline void qflex_cpu_exec_step(CPUState *cpu, SyncClocks *sc, int *ret) 
     }
     qflex_keep_looping = false;
 }
+
 static inline void qflex_cpu_exec_prologue(CPUState *cpu, SyncClocks *sc,int *ret) {
     CPUArchState *env = cpu->env_ptr;
     while (!cpu_handle_exception(cpu, ret)) {

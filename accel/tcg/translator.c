@@ -18,8 +18,6 @@
 #include "exec/log.h"
 #include "exec/translator.h"
 
-bool executed_once;
-
 
 /* Pairs with tcg_clear_temp_count.
    To be called by #TranslatorOps.{translate_insn,tb_stop} if
@@ -107,7 +105,6 @@ void translator_loop(const TranslatorOps *ops, DisasContextBase *db,
             ops->translate_insn(db, cpu);
         }
 
-        executed_once = true;
         /* Stop translation if translate_insn so indicated.  */
         if (db->is_jmp != DISAS_NEXT) {
             break;
