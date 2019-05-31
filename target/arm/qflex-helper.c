@@ -23,7 +23,7 @@ void HELPER(qflex_executed_instruction)(CPUARMState* env, uint64_t pc, int flags
     switch(location) {
     case QFLEX_EXEC_IN:
         if((unlikely(qflex_loglevel_mask(QFLEX_LOG_KERNEL_EXEC)) && cur_el != 0)
-                || (unlikely(qflex_loglevel_mask(QFLEX_LOG_USER_EXEC)) && fa_qflex_is_user_mode())) {
+                || (unlikely(qflex_loglevel_mask(QFLEX_LOG_USER_EXEC)) && cur_el == 0)) {
             qemu_log_lock();
             qemu_log("IN  :");
             log_target_disas(cs, pc, 4, flags);
@@ -33,8 +33,8 @@ void HELPER(qflex_executed_instruction)(CPUARMState* env, uint64_t pc, int flags
         break;
     case QFLEX_EXEC_OUT:
         if((unlikely(qflex_loglevel_mask(QFLEX_LOG_KERNEL_EXEC)) && cur_el != 0)
-                || (unlikely(qflex_loglevel_mask(QFLEX_LOG_USER_EXEC)) && fa_qflex_is_user_mode())) {
-            //qemu_log("OUT :0x%016lx\n", pc);
+                || (unlikely(qflex_loglevel_mask(QFLEX_LOG_USER_EXEC)) && cur_el == 0)) {
+            qemu_log("OUT :0x%016lx\n", pc);
         }
     default: break;
     }
@@ -59,7 +59,7 @@ void HELPER(qflex_magic_insn)(int nop_op) {
     case 103: qflex_log_mask_disable(QFLEX_LOG_MAGIC_INSN); break;
     default: break;
     }
-    qflex_log_mask(QFLEX_LOG_MAGIC_INSN,"MAGIC_INST:%u\n", v);
+    qflex_log_mask(QFLEX_LOG_MAGIC_INSN,"MAGIC_INST:%u\n", nop_op);
 }
 
 /**

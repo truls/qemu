@@ -1947,8 +1947,7 @@ static int qflex_cpu_step(CPUState *cpu, QFlexExecType_t type)
 
 static void qflex_prologue(CPUState *cpu) {
     qflex_api_values_init(cpu);
-    qflex_log_mask(QFLEX_LOG_GENERAL,
-                   "QFLEX: PROLOGUE START\n"
+    qflex_log_mask(QFLEX_LOG_GENERAL, "QFLEX: PROLOGUE START\n"
                    "    -> Skips initial snapshot load long interrupt routine to normal user program\n");
     while(!qflex_is_prologue_done()) {
         qflex_cpu_step(cpu, PROLOGUE);

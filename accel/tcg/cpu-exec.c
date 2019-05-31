@@ -931,7 +931,7 @@ int qflex_cpu_exec(CPUState *cpu, QFlexExecType_t type)
 
     switch(type) {
     case SINGLESTEP: qflex_cpu_exec_step(cpu, &sc, &ret); break;
-    case EXCP: break;
+    case EXECEXCP: break;
     case PROLOGUE: qflex_cpu_exec_prologue(cpu, &sc, &ret); break;
     }
 

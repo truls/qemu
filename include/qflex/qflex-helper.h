@@ -23,4 +23,4 @@ DEF_HELPER_7(flexus_insn_fetch_aa32, void, env, tl, i32, int, int, int, int)
 DEF_HELPER_6(flexus_ld_aa32, void, env, i32, int, int, tl, int)
 // env, addr, size, is user, pc, is atomic
 DEF_HELPER_6(flexus_st_aa32, void, env, i32, int, int, tl, int)
-#endif /^ CONFIG_FLEXUS */
+#endif /* CONFIG_FLEXUS */
