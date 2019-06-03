@@ -45,7 +45,7 @@ extern int iloop;
 static int iExit;
 
 #define PTH_INIT_LOOP() do {    \
-    iExit = 0                   \
+    iExit = 0;                   \
     } while(0)
 
 #define PTH_CHECK_LOOP(cpu, limit) do { \
@@ -727,7 +727,7 @@ int cpu_exec(CPUState *cpu)
         cc = CPU_GET_CLASS(cpu);
 #else /* buggy compiler */
         /* Assert that the compiler does not smash local variables. */
-        g_assert(cpu == current_cpu);
+        g_assert(cpu == PTH(current_cpu));
         g_assert(cc == CPU_GET_CLASS(cpu));
 #endif /* buggy compiler */
 #ifndef CONFIG_SOFTMMU
@@ -938,7 +938,7 @@ int qflex_cpu_exec(CPUState *cpu, QFlexExecType_t type)
         cc = CPU_GET_CLASS(cpu);
 #else /* buggy compiler */
         /* Assert that the compiler does not smash local variables. */
-        g_assert(cpu == current_cpu);
+        g_assert(cpu == PTH(current_cpu));
         g_assert(cc == CPU_GET_CLASS(cpu));
 #endif /* buggy compiler */
 #ifndef CONFIG_SOFTMMU

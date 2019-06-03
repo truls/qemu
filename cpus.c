@@ -1914,6 +1914,7 @@ int qflex_cpu_step(CPUState *cpu, QFlexExecType_t type)
 
     if (!cpu->queued_work_first && !cpu->exit_request) {
         atomic_mb_set(&tcg_current_rr_cpu, cpu);
+        PTH_UPDATE_CONTEXT
         PTH(current_cpu) = cpu;
 
         qemu_clock_enable(QEMU_CLOCK_VIRTUAL,
@@ -2041,8 +2042,13 @@ static void *qemu_tcg_rr_cpu_thread_fn(void *arg)
 
 #ifdef CONFIG_FLEXUS
     if (flexus_state.mode == TIMING){
+        qflex_log_mask_enable(QFLEX_LOG_KERNEL_EXEC);
+        qflex_log_mask_enable(QFLEX_LOG_USER_EXEC);
         qflex_log_mask_enable(QFLEX_LOG_GENERAL);
-        qflex_prologue(cpu);
+        CPU_FOREACH(cpu) {
+            qflex_prologue(cpu);
+        }
+        cpu = first_cpu;
         qflex_log_mask(QFLEX_LOG_GENERAL, "QFLEX: TIMING START\n"
                                           "    -> Starting timing simulation. Passing control to Flexus.\n");
         startFlexus();

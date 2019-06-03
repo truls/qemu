@@ -35,7 +35,7 @@ int qflex_singlestep(CPUState *cpu) {
 
 int advance_qemu(void * obj){
     PTH_UPDATE_CONTEXT;
-    CPUState *cpu = PTH((CPUState *)obj);
+    CPUState *cpu = obj;
     return qflex_singlestep(cpu);
 }
 
