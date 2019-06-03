@@ -733,6 +733,7 @@ int cpu_exec(CPUState *cpu)
 #ifndef CONFIG_SOFTMMU
         tcg_debug_assert(!have_mmap_lock());
 #endif
+        cpu->can_do_io = 1;
         tb_lock_reset();
         if (qemu_mutex_iothread_locked()) {
             qemu_mutex_unlock_iothread();
@@ -871,11 +872,34 @@ static inline void qflex_cpu_exec_prologue(CPUState *cpu, SyncClocks *sc,int *re
 
             tb = tb_find(cpu, last_tb, tb_exit);
             cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);
-
+            /* Try to align the host and virtual clocks
+               if the guest is in advance */
             align_clocks(sc, cpu);
-            if(qflex_update_prologue_done(env->pc)) break;
+            qflex_update_prologue_done(env->pc);
+
+            if(qflex_is_prologue_done()) break;
         }
-        if(qflex_update_prologue_done(env->pc)) break;
+        if(qflex_is_prologue_done()) break;
+    }
+}
+
+static inline void qflex_cpu_exec_qemu(CPUState *cpu, SyncClocks *sc,int *ret) {
+    /* if an exception is pending, we execute it here */
+    while (!cpu_handle_exception(cpu, ret)) {
+        TranslationBlock *last_tb = NULL;
+        int tb_exit = 0;
+
+        while (!cpu_handle_interrupt(cpu, &last_tb)) {
+            TranslationBlock *tb;
+
+            PTH_CHECK_LOOP(cpu, iloop);
+
+            tb = tb_find(cpu, last_tb, tb_exit);
+            cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);
+            /* Try to align the host and virtual clocks
+               if the guest is in advance */
+            align_clocks(sc, cpu);
+        }
     }
 }
 
@@ -917,6 +941,10 @@ int qflex_cpu_exec(CPUState *cpu, QFlexExecType_t type)
         g_assert(cpu == current_cpu);
         g_assert(cc == CPU_GET_CLASS(cpu));
 #endif /* buggy compiler */
+#ifndef CONFIG_SOFTMMU
+        tcg_debug_assert(!have_mmap_lock());
+#endif
+        cpu->can_do_io = 1;
         tb_lock_reset();
         if (qemu_mutex_iothread_locked()) {
             qemu_mutex_unlock_iothread();
@@ -934,6 +962,7 @@ int qflex_cpu_exec(CPUState *cpu, QFlexExecType_t type)
     case SINGLESTEP: qflex_cpu_exec_step(cpu, &sc, &ret); break;
     case EXECEXCP: break;
     case PROLOGUE: qflex_cpu_exec_prologue(cpu, &sc, &ret); break;
+    case QEMU:     qflex_cpu_exec_qemu(cpu, &sc, &ret); break;
     }
 
     cc->cpu_exec_exit(cpu);
