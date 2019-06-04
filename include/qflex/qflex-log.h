@@ -8,9 +8,8 @@ extern int qflex_loglevel;
 
 #define QFLEX_LOG_GENERAL       (1 << 0)
 #define QFLEX_LOG_INTERRUPT     (1 << 1)
-#define QFLEX_LOG_USER_EXEC     (1 << 2)
-#define QFLEX_LOG_KERNEL_EXEC   (1 << 3)
-#define QFLEX_LOG_MAGIC_INSN    (1 << 4)
+#define QFLEX_LOG_TB_EXEC       (1 << 2)
+#define QFLEX_LOG_MAGIC_INSN    (1 << 3)
 
 /* Returns true if a bit is set in the current loglevel mask
  */
@@ -20,6 +19,8 @@ static inline bool qflex_loglevel_mask(int mask)
 }
 
 /* Logging functions: */
+int qflex_str_to_log_mask(const char *str);
+void qflex_print_log_usage(const char *str, FILE *f);
 
 /* log only if a bit is set on the current loglevel mask:
  * @mask: bit to check in the mask
@@ -38,4 +39,7 @@ static inline bool qflex_loglevel_mask(int mask)
 #define qflex_log_mask_disable(MASK)    \
     do { qflex_loglevel &= ~MASK; } while (0)
 
+static inline void qflex_set_log(int mask) { qflex_loglevel = mask; }
+
 #endif /* QFLEX_LOG_H */
+

@@ -4555,6 +4555,16 @@ contents of @code{iv.b64} to the second secret
 
 ETEXI
 
+#ifdef CONFIG_FLEXUS
+DEF("qflex_d", HAS_ARG, QEMU_OPTION_qflex_d, \
+    "-qflex_d item1,...    enable logging of specified items (use '-d help' for a list of log items)\n",
+    QEMU_ARCH_ALL)
+STEXI
+@item -qflex_d @var{item1}[,...]
+@findex -qflex_d
+Enable logging of specified items.
+ETEXI
+#endif
 
 HXCOMM This is the last statement. Insert new options before this line!
 STEXI

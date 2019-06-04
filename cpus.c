@@ -2042,9 +2042,6 @@ static void *qemu_tcg_rr_cpu_thread_fn(void *arg)
 
 #ifdef CONFIG_FLEXUS
     if (flexus_state.mode == TIMING){
-        qflex_log_mask_enable(QFLEX_LOG_KERNEL_EXEC);
-        qflex_log_mask_enable(QFLEX_LOG_USER_EXEC);
-        qflex_log_mask_enable(QFLEX_LOG_GENERAL);
         CPU_FOREACH(cpu) {
             qflex_prologue(cpu);
         }

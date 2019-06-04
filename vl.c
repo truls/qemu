@@ -135,6 +135,10 @@ int main(int argc, char **argv)
 #include "qapi/qmp/qerror.h"
 #include "sysemu/iothread.h"
 
+#if defined(CONFIG_FLEXUS)
+#include "qflex/qflex-log.h"
+#endif /* CONFIG_FLEXUS */
+
 #define MAX_VIRTIO_CONSOLES 1
 #define MAX_SCLP_CONSOLES 1
 
@@ -3268,7 +3272,11 @@ int main(int argc, char **argv, char **envp)
 #ifdef CONFIG_EXTSNAP
     const char* loadext = NULL;
 #endif
-    char **dirs;
+#if defined(CONFIG_FLEXUS)
+    const char *qflex_log_opts = NULL;
+#endif /* CONFIG_FLEXUS */
+
+   char **dirs;
     typedef struct BlockdevOptions_queue {
         BlockdevOptions *bdo;
         Location loc;
@@ -4410,6 +4418,11 @@ int main(int argc, char **argv, char **envp)
                     exit(1);
                 }
                 break;
+#if defined(CONFIG_FLEXUS) ||defined(CONFIG_FA_QFLEX)
+            case QEMU_OPTION_qflex_d:
+                    qflex_log_opts = optarg;
+                    break;
+#endif /* CONFIG_FLEXUS */ /* CONFIG_FA_QFLEX */
             default:
                 os_parse_cmd_args(popt->index, optarg);
             }
@@ -5125,6 +5138,20 @@ int main(int argc, char **argv, char **envp)
 #endif
     }
 #endif
+
+#if defined(CONFIG_FLEXUS) || defined(CONFIG_FA_QFLEX)
+    if (qflex_log_opts) {
+        int mask;
+        mask = qflex_str_to_log_mask(qflex_log_opts);
+        if (!mask) {
+            qflex_print_log_usage(qflex_log_opts, stdout);
+            exit(1);
+        }
+        qflex_set_log(mask);
+    } else {
+        qflex_set_log(0);
+    }
+#endif /* CONFIG_FLEXUS */ /* CONFIG_FA_QLEX */
 
     qdev_prop_check_globals();
     if (vmstate_dump_file) {

@@ -11324,14 +11324,14 @@ static void disas_a64_insn(CPUARMState *env, DisasContext *s)
     s->insn = insn;
     s->pc += 4;
 
-#if defined(CONFIG_FLEXUS)
-    if( flexus_in_timing() ) {
+#if defined(CONFIG_FLEXUS) || defined(CONFIG_FA_QFLEX)
+    if( flexus_in_timing() || unlikely(qflex_loglevel_mask(QFLEX_LOG_TB_EXEC))) {
         uint64_t pc = s->base.pc_first;
         uint32_t flags = 4 | (bswap_code(s->sctlr_b) ? 2 : 0);
         gen_helper_qflex_executed_instruction(cpu_env, tcg_const_i64(pc), tcg_const_i32(flags),
                                               tcg_const_i32(QFLEX_EXEC_IN));
     }
-#endif
+#endif /* CONFIG_FLEXUS */ /* CONFIG_FA_QFLEX */
 
     s->fp_access_checked = false;
 

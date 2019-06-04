@@ -6,10 +6,16 @@
 #include "qflex/qflex-log.h"
 #include "qflex/qflex.h"
 
-/* TCG helper functions. (See exec/helper-proto.h  and target/arch/helper.h)
-   This one expands prototypes for the helper functions.  */
-
 #if defined(CONFIG_FLEXUS)
+
+/* TCG helper functions. (See exec/helper-proto.h  and target/arch/helper.h)
+ * This one expands prototypes for the helper functions.
+ * They get executed in the TB
+ * To use them: in translate.c or translate-a64.c
+ * ex: HELPER(qflex_func)(arg1, arg2, ..., argn)
+ * gen_helper_qflex_func(arg1, arg2, ..., argn)
+ */
+
 /**
  * @brief HELPER(qflex_executed_instruction)
  * location: location of the gen_helper_ in the transalation.
@@ -22,20 +28,13 @@ void HELPER(qflex_executed_instruction)(CPUARMState* env, uint64_t pc, int flags
 
     switch(location) {
     case QFLEX_EXEC_IN:
-        if((unlikely(qflex_loglevel_mask(QFLEX_LOG_KERNEL_EXEC)) && cur_el != 0)
-                || (unlikely(qflex_loglevel_mask(QFLEX_LOG_USER_EXEC)) && cur_el == 0)) {
+        if(unlikely(qflex_loglevel_mask(QFLEX_LOG_TB_EXEC))) {
             qemu_log_lock();
             qemu_log("IN  :");
             log_target_disas(cs, pc, 4, flags);
             qemu_log_unlock();
         }
         qflex_update_inst_done(true);
-        break;
-    case QFLEX_EXEC_OUT:
-        if((unlikely(qflex_loglevel_mask(QFLEX_LOG_KERNEL_EXEC)) && cur_el != 0)
-                || (unlikely(qflex_loglevel_mask(QFLEX_LOG_USER_EXEC)) && cur_el == 0)) {
-            qemu_log("OUT :0x%016lx\n", pc);
-        }
         break;
     default: break;
     }
