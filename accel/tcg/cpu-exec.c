@@ -774,89 +774,30 @@ int cpu_exec(CPUState *cpu)
 
 
 #if defined(CONFIG_FLEXUS)
-static int qflex_keep_looping = false;
-static int qflex_executed_once = false;
-
-static inline void qflex_cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
-                                          TranslationBlock **last_tb, int *tb_exit)
-{
-
-    uintptr_t ret;
-    int32_t insns_left;
-
-    trace_exec_tb(tb, tb->pc);
-    ret = cpu_tb_exec(cpu, tb);
-    tb = (TranslationBlock *)(ret & ~TB_EXIT_MASK);
-    *tb_exit = ret & TB_EXIT_MASK;
-    if (*tb_exit != TB_EXIT_REQUESTED) {
-        *last_tb = tb;
-        goto executed_correctly;
-    }
-
-    *last_tb = NULL;
-    insns_left = atomic_read(&cpu->icount_decr.u32);
-    atomic_set(&cpu->icount_decr.u16.high, 0);
-    if (insns_left < 0) {
-        /* Something asked us to stop executing chained TBs; just
-         * continue round the main loop. Whatever requested the exit
-         * will also have set something else (eg exit_request or
-         * interrupt_request) which we will handle next time around
-         * the loop.  But we need to ensure the zeroing of icount_decr
-         * comes before the next read of cpu->exit_request
-         * or cpu->interrupt_request.
-         */
-        smp_mb();
-        goto not_executed_correctly;
-    }
-
-    /* Instruction counter expired.  */
-    assert(use_icount);
-#ifndef CONFIG_USER_ONLY
-    /* Ensure global icount has gone forward */
-    cpu_update_icount(cpu);
-    /* Refill decrementer and continue execution.  */
-    insns_left = MIN(0xffff, cpu->icount_budget);
-    cpu->icount_decr.u16.low = insns_left;
-    cpu->icount_extra = cpu->icount_budget - insns_left;
-    if (!cpu->icount_extra) {
-        /* Execute any remaining instructions, then let the main loop
-         * handle the next event.
-         */
-        if (insns_left > 0) {
-            cpu_exec_nocache(cpu, insns_left, tb, false);
-        }
-    }
-#endif
-executed_correctly:
-    qflex_keep_looping = false;
-    return;
-
-not_executed_correctly:
-    qflex_keep_looping = true;
-    return;
-}
-
+static bool qflex_broke_loop = false;
 static inline void qflex_cpu_exec_step(CPUState *cpu, SyncClocks *sc, int *ret) {
-    qflex_executed_once = false;
-    while ((!cpu_handle_exception(cpu, ret) && !qflex_executed_once) || qflex_keep_looping) {
-        TranslationBlock *last_tb = NULL;
-        int tb_exit = 0;
+    while (qflex_broke_loop || !cpu_handle_exception(cpu, ret)) {
+        static TranslationBlock *last_tb = NULL;
+        static int tb_exit = 0;
+        if(qflex_broke_loop == false){
+            last_tb = NULL;
+            tb_exit = 0;
+        }
+        qflex_broke_loop = false;
 
-        while ((!cpu_handle_interrupt(cpu, &last_tb) && !qflex_executed_once) || qflex_keep_looping) {
-            TranslationBlock *tb;
-
+        while (!cpu_handle_interrupt(cpu, &last_tb)) {
             PTH_CHECK_LOOP(cpu, iloop);
 
-            tb = tb_find(cpu, last_tb, tb_exit);
-            qflex_cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);
+            TranslationBlock *tb = tb_find(cpu, last_tb, tb_exit);
+            cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);
 
             align_clocks(sc, cpu);
-            \
-            qflex_executed_once = true;
-            break;
+            if(qflex_is_inst_done()){
+                qflex_broke_loop = true;
+                return;
+            }
         }
     }
-    qflex_keep_looping = false;
 }
 
 static inline void qflex_cpu_exec_prologue(CPUState *cpu, SyncClocks *sc,int *ret) {
@@ -944,6 +885,7 @@ int qflex_cpu_exec(CPUState *cpu, QFlexExecType_t type)
 #ifndef CONFIG_SOFTMMU
         tcg_debug_assert(!have_mmap_lock());
 #endif
+        qflex_broke_loop = false;
         cpu->can_do_io = 1;
         tb_lock_reset();
         if (qemu_mutex_iothread_locked()) {
