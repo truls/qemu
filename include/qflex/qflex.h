@@ -26,6 +26,7 @@ typedef enum {
 extern bool qflex_inst_done;
 extern bool qflex_prologue_done;
 extern uint64_t qflex_prologue_pc;
+extern bool qflex_broke_loop;
 
 /** qflex_api_values_init
  * Inits extern flags and vals

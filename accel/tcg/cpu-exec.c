@@ -774,76 +774,7 @@ int cpu_exec(CPUState *cpu)
 
 
 #if defined(CONFIG_FLEXUS)
-static bool qflex_broke_loop = false;
-static inline void qflex_cpu_exec_step(CPUState *cpu, SyncClocks *sc, int *ret) {
-    while (qflex_broke_loop || !cpu_handle_exception(cpu, ret)) {
-        static TranslationBlock *last_tb = NULL;
-        static int tb_exit = 0;
-        if(qflex_broke_loop == false){
-            last_tb = NULL;
-            tb_exit = 0;
-        }
-        qflex_broke_loop = false;
-
-        while (!cpu_handle_interrupt(cpu, &last_tb)) {
-            PTH_CHECK_LOOP(cpu, iloop);
-
-            TranslationBlock *tb = tb_find(cpu, last_tb, tb_exit);
-            cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);
-
-            align_clocks(sc, cpu);
-            if(qflex_is_inst_done()){
-                qflex_broke_loop = true;
-                return;
-            }
-        }
-    }
-}
-
-static inline void qflex_cpu_exec_prologue(CPUState *cpu, SyncClocks *sc,int *ret) {
-    CPUArchState *env = cpu->env_ptr;
-    while (!cpu_handle_exception(cpu, ret)) {
-        TranslationBlock *last_tb = NULL;
-        int tb_exit = 0;
-
-        while (!cpu_handle_interrupt(cpu, &last_tb)) {
-            TranslationBlock *tb;
-
-            PTH_CHECK_LOOP(cpu, iloop);
-
-            tb = tb_find(cpu, last_tb, tb_exit);
-            cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);
-            /* Try to align the host and virtual clocks
-               if the guest is in advance */
-            align_clocks(sc, cpu);
-            qflex_update_prologue_done(env->pc);
-
-            if(qflex_is_prologue_done()) break;
-        }
-        if(qflex_is_prologue_done()) break;
-    }
-}
-
-static inline void qflex_cpu_exec_qemu(CPUState *cpu, SyncClocks *sc,int *ret) {
-    /* if an exception is pending, we execute it here */
-    while (!cpu_handle_exception(cpu, ret)) {
-        TranslationBlock *last_tb = NULL;
-        int tb_exit = 0;
-
-        while (!cpu_handle_interrupt(cpu, &last_tb)) {
-            TranslationBlock *tb;
-
-            PTH_CHECK_LOOP(cpu, iloop);
-
-            tb = tb_find(cpu, last_tb, tb_exit);
-            cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);
-            /* Try to align the host and virtual clocks
-               if the guest is in advance */
-            align_clocks(sc, cpu);
-        }
-    }
-}
-
+bool qflex_broke_loop = false;
 int qflex_cpu_exec(CPUState *cpu, QFlexExecType_t type)
 {
     PTH_UPDATE_CONTEXT;
@@ -900,11 +831,44 @@ int qflex_cpu_exec(CPUState *cpu, QFlexExecType_t type)
         ret = cpu->interrupt_request;
     }
 
-    switch(type) {
-    case SINGLESTEP: qflex_cpu_exec_step(cpu, &sc, &ret); break;
-    case EXECEXCP: break;
-    case PROLOGUE: qflex_cpu_exec_prologue(cpu, &sc, &ret); break;
-    case QEMU:     qflex_cpu_exec_qemu(cpu, &sc, &ret); break;
+    while (qflex_broke_loop || !cpu_handle_exception(cpu, &ret)) {
+        static TranslationBlock *last_tb = NULL;
+        static int tb_exit = 0;
+        if(qflex_broke_loop == false){
+            last_tb = NULL;
+            tb_exit = 0;
+        }
+        qflex_broke_loop = false;
+
+        while (!cpu_handle_interrupt(cpu, &last_tb)) {
+            PTH_CHECK_LOOP(cpu, iloop);
+
+            TranslationBlock *tb = tb_find(cpu, last_tb, tb_exit);
+            cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);
+
+            align_clocks(&sc, cpu);
+            switch(type) {
+                case SINGLESTEP:
+                    if(qflex_is_inst_done()){
+                        qflex_broke_loop = true;
+                    }
+                    break;
+                case PROLOGUE:
+                    if(qflex_is_inst_done()){
+                        qflex_update_prologue_done(((CPUArchState *)(cpu->env_ptr))->pc);
+                        if(qflex_is_prologue_done()){
+                            qflex_broke_loop = true;
+                        }
+                    }
+                    break;
+                default:
+                    break;
+            }
+            if(qflex_broke_loop)
+                break;
+        }
+        if(qflex_broke_loop)
+            break;
     }
 
     cc->cpu_exec_exit(cpu);
