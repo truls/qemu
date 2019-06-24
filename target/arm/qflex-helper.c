@@ -30,7 +30,7 @@ void HELPER(qflex_executed_instruction)(CPUARMState* env, uint64_t pc, int flags
     case QFLEX_EXEC_IN:
         if(unlikely(qflex_loglevel_mask(QFLEX_LOG_TB_EXEC))) {
             qemu_log_lock();
-            qemu_log("IN  :");
+            qemu_log("IN[%d]  :", cs->cpu_index);
             log_target_disas(cs, pc, 4, flags);
             qemu_log_unlock();
         }

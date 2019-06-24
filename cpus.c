@@ -1904,8 +1904,6 @@ int qflex_cpu_step(CPUState *cpu, QFlexExecType_t type)
 {
     int r = 0;
 
-    if(qflex_broke_loop)
-        goto qflex_resume;
     /* Account partial waits to QEMU_CLOCK_VIRTUAL.  */
     qemu_account_warp_timer();
 
@@ -1925,10 +1923,7 @@ int qflex_cpu_step(CPUState *cpu, QFlexExecType_t type)
         if (cpu_can_run(cpu)) {
 
             prepare_icount_for_run(cpu);
-            qflex_resume:
             r = qflex_tcg_cpu_exec(cpu, type);
-            if(qflex_broke_loop)
-                return r;
             process_icount_data(cpu);
 
             switch (r) {
