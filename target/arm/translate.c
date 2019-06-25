@@ -75,6 +75,7 @@ static TCGv_i64 cpu_F0d, cpu_F1d;
 #ifdef CONFIG_FLEXUS
 #include "include/sysemu/sysemu.h"
 #include "../libqflex/api.h"
+#include "qflex/qflex.h"
 static target_ulong flexus_ins_pc = -1;
 
 #define FLEXUS_IF_IN_SIMULATION( a ) do {	\
@@ -8972,10 +8973,10 @@ static void disas_arm_insn(DisasContext *s, unsigned int insn)
             break;
         case 0x0c:
 #ifdef CONFIG_FLEXUS
-	    if( rd == rn && rn == rm && rd != 16 && rd != 1 ) {
-	      printf("Detected potential magic instructions: %d\n", rd);
-	      gen_helper_flexus_magic_ins( tcg_const_i32(rd) );
-	    }
+            if( rd == rn && rn == rm && rd < 15 && rd != 1 ) {
+                qflex_log_mask(QFLEX_LOG_MAGIC_INSN,"Detected magic instruction (64bit): %d\n", rd);
+                gen_helper_flexus_magic_ins(NULL/*FIXME:cpu ptr*/, tcg_const_i32(rd), 0, 0, 0);
+            }
 #endif
             tcg_gen_or_i32(tmp, tmp, tmp2);
             if (logic_cc) {
