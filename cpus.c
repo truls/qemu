@@ -2042,10 +2042,7 @@ static void *qemu_tcg_rr_cpu_thread_fn(void *arg)
 
 #ifdef CONFIG_FLEXUS
     if (flexus_state.mode == TIMING){
-        CPU_FOREACH(cpu) {
-            qflex_prologue(cpu);
-        }
-        cpu = first_cpu;
+        qflex_prologue(CPU_NEXT(cpu) ? CPU_NEXT(cpu) : cpu);
         qflex_log_mask(QFLEX_LOG_GENERAL, "QFLEX: TIMING START\n"
                                           "    -> Starting timing simulation. Passing control to Flexus.\n");
         startFlexus();

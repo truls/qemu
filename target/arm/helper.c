@@ -11666,7 +11666,14 @@ uint64_t cpu_read_sctlr(uint8_t id, void* obj){
     CPUARMState *env = &cpu->env;
 
     return env->cp15.sctlr_el[id];
+}
 
+uint64_t cpu_read_tpidr(uint8_t id, void* obj){
+    CPUState *cs = (CPUState*)obj;
+    ARMCPU *cpu = ARM_CPU(cs);
+    CPUARMState *env = &cpu->env;
+
+    return env->cp15.tpidr_el[id];
 }
 
 uint32_t cpu_read_pstate(void* obj){

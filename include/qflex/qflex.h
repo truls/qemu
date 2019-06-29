@@ -58,7 +58,7 @@ int qflex_cpu_exec(CPUState *cpu, QFlexExecType_t type);
 static inline bool qflex_is_inst_done(void)     { return qflex_inst_done; }
 static inline bool qflex_is_prologue_done(void) { return qflex_prologue_done; }
 static inline bool qflex_update_prologue_done(uint64_t cur_pc) {
-    qflex_prologue_done = (cur_pc == qflex_prologue_pc);
+    qflex_prologue_done = ((cur_pc >> 48) == 0);
     return qflex_prologue_done;
 }
 static inline void qflex_update_inst_done(bool done) { qflex_inst_done = done; }
