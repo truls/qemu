@@ -88,11 +88,16 @@ const char* disassemble(void* cpu, uint64_t pc){
         length = ftell (f);
         fseek (f, 0, SEEK_SET);
         buffer = malloc (length);
-        if (buffer)
-        {
-            fread (buffer, 1, length, f);
+        if (buffer) {
+            size_t bytes = fread(buffer, 1, length, f);
+            if( bytes != length ) {
+                int errcode = ferror(f);
+                fprintf(stderr,"ERROR in disassemble. Tried to read %lu bytes into buffer addr 0x%p."
+                        "Only successfully read %lu. Error from \'ferror\' is: %d\n",length,buffer,bytes,errcode);
+                assert(false);
+            }
         }
-        fclose (f);
+        fclose(f);
     }
 
     if (buffer){
@@ -137,7 +142,6 @@ uint64_t cpu_get_pending_interrupt(void *obj) {
     uint32_t target_el;
     uint32_t excp_idx;
     int ret = 0;
-    ARMCPU *cpu = ARM_CPU(cs);
 
     if (interrupt_request & CPU_INTERRUPT_FIQ) {
         excp_idx = EXCP_FIQ;
@@ -166,10 +170,6 @@ uint64_t cpu_get_pending_interrupt(void *obj) {
         if (arm_excp_unmasked(cs, excp_idx, target_el)) {
             ret = 4;
         }
-    }
-
-    if (ret != 0){
-        int y = 0;
     }
 
     return ret;

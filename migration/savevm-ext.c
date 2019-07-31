@@ -560,21 +560,21 @@ int incremental_load_vmstate_ext (const char *name, Monitor *mon) {
     if (dir_path == NULL) {
         monitor_printf(mon, "There are not block devices on current VM\n");
         ret = -ENODEV;
-        goto end;
+        goto end_snap_uncreated;
     }
     QDECREF(dir_path);
 
     ret = goto_snap(name);
     if (ret < 0) {
         monitor_printf(mon, "Cannot load snapshot %s\n", name);
-        goto end;
+        goto end_snap_uncreated;
     }
 
     BlockDriverState *bs = find_active();
     if (bs == NULL) {
         monitor_printf(mon, "There are not block devices on current VM\n");
         ret = -ENODEV;
-        goto end;
+        goto end_snap_uncreated;
     }
 
     // Incremental snapshots
@@ -617,6 +617,10 @@ end:
     }
     if (snap_chain != NULL) {
         qlist_destroy_obj(QOBJECT(snap_chain));
+    }
+end_snap_uncreated:
+    if (saved_vm_running) {
+        vm_start();
     }
     return ret;
 }
