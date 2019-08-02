@@ -748,11 +748,11 @@ int cpu_exec(CPUState *cpu)
     }
 
     /* if an exception is pending, we execute it here */
-    while (!cpu_handle_exception(cpu, &ret)) {
+    while (!cpu_handle_exception(cpu, &ret) && QUANTUM_LIMIT) {
         TranslationBlock *last_tb = NULL;
         int tb_exit = 0;
 
-        while (!cpu_handle_interrupt(cpu, &last_tb)) {
+        while (!cpu_handle_interrupt(cpu, &last_tb) && QUANTUM_LIMIT) {
             TranslationBlock *tb;
 
             PTH_CHECK_LOOP(cpu, iloop);
