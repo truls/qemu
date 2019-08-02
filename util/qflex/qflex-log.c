@@ -1,5 +1,7 @@
 #include "qflex/qflex-log.h"
 int qflex_loglevel = 0;
+int qflex_iloop = 0;
+int qflex_iExit = 0;
 
 const QEMULogItem qflex_log_items[] = {
     { QFLEX_LOG_GENERAL, "gen",
@@ -10,6 +12,8 @@ const QEMULogItem qflex_log_items[] = {
       "show instruction for each executed TB" },
     { QFLEX_LOG_MAGIC_INSN, "magic_insn",
       "show when QFLEX magic instrutions are executed" },
+    { QFLEX_LOG_FF, "ff",
+      "fast-forward cores into user-mode" },
     { 0, NULL, NULL },
 };
 
@@ -26,6 +30,9 @@ int qflex_str_to_log_mask(const char *str)
             for (item = qflex_log_items; item->mask != 0; item++) {
                 mask |= item->mask;
             }
+        } else if (g_str_has_prefix(*tmp, "loop=") && (*tmp)[5] != '\0') {
+            char* subs = strndup(&(*tmp)[5],  (strlen((*tmp))-5));
+            qflex_iloop = atoi(subs);
         } else {
             for (item = qflex_log_items; item->mask != 0; item++) {
                 if (g_str_equal(*tmp, item->name)) {

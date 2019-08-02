@@ -2041,14 +2041,9 @@ static void *qemu_tcg_rr_cpu_thread_fn(void *arg)
     cpu->exit_request = 1;
 
 #ifdef CONFIG_FLEXUS
-    if (flexus_state.mode == TIMING){
-        qflex_prologue(CPU_NEXT(cpu) ? CPU_NEXT(cpu) : cpu);
-        qflex_log_mask(QFLEX_LOG_GENERAL, "QFLEX: TIMING START\n"
-                                          "    -> Starting timing simulation. Passing control to Flexus.\n");
-        startFlexus();
-        return NULL;
-    }
-#endif /* CONFIG_FLEXUS */
+    int counter = 0, init_counter = 0;
+    bool initialize[64] = {false}, completed[64] = {false}, ff = unlikely(qflex_loglevel_mask(QFLEX_LOG_FF));
+#endif
     while (1) {
         /* Account partial waits to QEMU_CLOCK_VIRTUAL.  */
         qemu_account_warp_timer();
@@ -2107,6 +2102,25 @@ static void *qemu_tcg_rr_cpu_thread_fn(void *arg)
                 break;
             }
 
+#ifdef CONFIG_FLEXUS
+            if(ff && init_counter == smp_cpus && (ARM_CPU(cpu)->env.pc >> 32) == 0 && !completed[cpu->cpu_index]){
+                counter = 0;
+                CPUState *bkp_cpu = first_cpu;
+                CPU_FOREACH(bkp_cpu) {
+                    completed[bkp_cpu->cpu_index] = false;
+                    if((ARM_CPU(bkp_cpu)->env.pc >> 32) == 0){
+                        completed[bkp_cpu->cpu_index] = true;
+                        counter++;
+                    }
+                }
+                if(counter == smp_cpus)
+                    break;
+            } else if(ff && init_counter < smp_cpus && !initialize[cpu->cpu_index]){
+                initialize[cpu->cpu_index] = true;
+                init_counter += 1;
+            }
+#endif
+
             cpu = CPU_NEXT(cpu);
 
             PTH_YIELD
@@ -2122,7 +2136,24 @@ static void *qemu_tcg_rr_cpu_thread_fn(void *arg)
 
         qemu_tcg_wait_io_event(cpu ? cpu : QTAILQ_FIRST(&cpus));
         deal_with_unplugged_cpus();
+#ifdef CONFIG_FLEXUS
+        if(counter == smp_cpus){
+            qflex_log_mask(QFLEX_LOG_GENERAL, "QFLEX: Cores successfully fast-forwarded to User mode\n");
+            break;
+        }
+#endif
     }
+#ifdef CONFIG_FLEXUS
+    if (flexus_state.mode == TIMING){
+        // qflex_prologue(CPU_NEXT(cpu) ? CPU_NEXT(cpu) : cpu);
+        qflex_log_mask(QFLEX_LOG_GENERAL, "QFLEX: TIMING START\n"
+                                          "    -> Starting timing simulation. Passing control to Flexus.\n");
+        qflex_control_with_flexus = true;
+        startFlexus();
+        return NULL;
+    }
+    qflex_log_mask(QFLEX_LOG_GENERAL, "QFLEX: Went outside QEMU and Flexus loops\n");
+#endif /* CONFIG_FLEXUS */
 
     return NULL;
 }

@@ -5,11 +5,27 @@
 #include "qemu/log.h"
 
 extern int qflex_loglevel;
+extern int qflex_iloop;
+extern int qflex_iExit;
 
 #define QFLEX_LOG_GENERAL       (1 << 0)
 #define QFLEX_LOG_INTERRUPT     (1 << 1)
 #define QFLEX_LOG_TB_EXEC       (1 << 2)
 #define QFLEX_LOG_MAGIC_INSN    (1 << 3)
+#define QFLEX_LOG_FF            (1 << 4)
+
+#define QFLEX_INIT_LOOP() do {  \
+    qflex_iExit = 0;                  \
+} while(0)
+
+#define QFLEX_CHECK_LOOP(cpu) do {   \
+    if (qflex_iloop > 0) {           \
+        if (++qflex_iExit > qflex_iloop) { \
+            qflex_iExit = 0;               \
+            qemu_cpu_kick(cpu);      \
+        }                            \
+    }                                \
+} while(0)
 
 /* Returns true if a bit is set in the current loglevel mask
  */

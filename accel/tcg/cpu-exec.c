@@ -40,26 +40,6 @@
 #include "qflex/qflex.h"
 #endif /* CONFIG_FLEXUS */
 
-#ifdef CONFIG_PTH
-extern int iloop;
-static int iExit;
-
-#define PTH_INIT_LOOP() do {    \
-    iExit = 0;                   \
-    } while(0)
-
-#define PTH_CHECK_LOOP(cpu, limit) do { \
-    if (limit > 0) {                    \
-        if (++iExit > limit) {          \
-            iExit = 0;                  \
-            qemu_cpu_kick(cpu);         \
-        }}                              \
-    } while(0)
-#else
-#define PTH_INIT_LOOP()
-#define PTH_CHECK_LOOP(cpu, limit)
-#endif
-
 #ifdef CONFIG_QUANTUM
 #define QUANTUM_LIMIT \
     !cpu->hasReachedInstrLimit
@@ -739,7 +719,9 @@ int cpu_exec(CPUState *cpu)
             qemu_mutex_unlock_iothread();
         }
     }
-    PTH_INIT_LOOP();
+#if defined(CONFIG_FLEXUS)
+    QFLEX_INIT_LOOP();
+#endif
 
     if (cpu->exception_index >= 0 ){
         ret = cpu->exception_index;
@@ -755,7 +737,9 @@ int cpu_exec(CPUState *cpu)
         while (!cpu_handle_interrupt(cpu, &last_tb) && QUANTUM_LIMIT) {
             TranslationBlock *tb;
 
-            PTH_CHECK_LOOP(cpu, iloop);
+#if defined(CONFIG_FLEXUS)
+            QFLEX_CHECK_LOOP(cpu);
+#endif
 
             tb = tb_find(cpu, last_tb, tb_exit);
             cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);
@@ -823,7 +807,6 @@ int qflex_cpu_exec(CPUState *cpu, QFlexExecType_t type)
             qemu_mutex_unlock_iothread();
         }
     }
-    PTH_INIT_LOOP();
 
     if (cpu->exception_index >= 0 ){
         ret = cpu->exception_index;
@@ -841,7 +824,6 @@ int qflex_cpu_exec(CPUState *cpu, QFlexExecType_t type)
         qflex_broke_loop = false;
 
         while (!cpu_handle_interrupt(cpu, &last_tb)) {
-            PTH_CHECK_LOOP(cpu, iloop);
 
             TranslationBlock *tb = tb_find(cpu, last_tb, tb_exit);
             cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);

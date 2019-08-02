@@ -5,6 +5,7 @@
 bool qflex_inst_done = false;
 bool qflex_prologue_done = false;
 uint64_t qflex_prologue_pc = 0xDEADBEEF;
+bool qflex_control_with_flexus = false;
 
 void qflex_api_values_init(CPUState *cpu) {
     qflex_inst_done = false;
