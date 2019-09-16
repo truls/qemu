@@ -238,7 +238,7 @@ int delete_tmp_overlay(void) {
 
 int create_tmp_overlay(void) {
     BlockDriverState *bs = find_active();
-    char tmp_name[PATH_MAX];
+    char* tmp_name = g_malloc0(8192*sizeof(char));
     const char *dev_name = bdrv_get_device_name(bs);
     int i = 0;
 
@@ -257,8 +257,10 @@ int create_tmp_overlay(void) {
                                      true, 1, &local_err);
     if (local_err != NULL) {
         error_report_err(local_err);
+        g_free(tmp_name);
         return -EINVAL;
     }
+    g_free(tmp_name);
     return 0;
 }
 
