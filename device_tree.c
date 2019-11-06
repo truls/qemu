@@ -27,6 +27,11 @@
 #include "hw/boards.h"
 #include "qemu/config-file.h"
 
+/* Hack to work around the conflicting definition of __bitwise in
+* <linux/types.h> in recent linux. If dtc is pumped to a recent
+* version, this is no longer needed.
+*/
+#undef __bitwise
 #include <libfdt.h>
 
 #define FDT_MAX_SIZE  0x10000

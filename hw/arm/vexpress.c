@@ -38,6 +38,11 @@
 #include "hw/block/flash.h"
 #include "sysemu/device_tree.h"
 #include "qemu/error-report.h"
+/* Hack to work around the conflicting definition of __bitwise in
+* <linux/types.h> in recent linux. If dtc is pumped to a recent
+* version, this is no longer needed.
+*/
+#undef __bitwise
 #include <libfdt.h>
 #include "hw/char/pl011.h"
 #include "hw/cpu/a9mpcore.h"

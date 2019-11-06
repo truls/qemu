@@ -23,6 +23,11 @@
 
 #include "qemu/osdep.h"
 #include "qapi/error.h"
+/* Hack to work around the conflicting definition of __bitwise in
+* <linux/types.h> in recent linux. If dtc is pumped to a recent
+* version, this is no longer needed.
+*/
+#undef __bitwise
 #include <libfdt.h>
 #include "qemu-common.h"
 #ifdef CONFIG_LINUX
