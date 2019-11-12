@@ -173,22 +173,22 @@ typedef struct mv88w8618_eth_state {
 
 static void eth_rx_desc_put(uint32_t addr, mv88w8618_rx_desc *desc)
 {
-    cpu_to_le32s(&desc->cmdstat);
-    cpu_to_le16s(&desc->bytes);
-    cpu_to_le16s(&desc->buffer_size);
-    cpu_to_le32s(&desc->buffer);
-    cpu_to_le32s(&desc->next);
+    desc->cmdstat = cpu_to_le32(desc->cmdstat);
+    desc->bytes = cpu_to_le16(desc->bytes);
+    desc->buffer_size = cpu_to_le16(desc->buffer_size);
+    desc->buffer = cpu_to_le32(desc->buffer);
+    desc->next = cpu_to_le32(desc->next);
     cpu_physical_memory_write(addr, desc, sizeof(*desc));
 }
 
 static void eth_rx_desc_get(uint32_t addr, mv88w8618_rx_desc *desc)
 {
     cpu_physical_memory_read(addr, desc, sizeof(*desc));
-    le32_to_cpus(&desc->cmdstat);
-    le16_to_cpus(&desc->bytes);
-    le16_to_cpus(&desc->buffer_size);
-    le32_to_cpus(&desc->buffer);
-    le32_to_cpus(&desc->next);
+    desc->cmdstat = le32_to_cpu(desc->cmdstat);
+    desc->bytes = le16_to_cpu(desc->bytes);
+    desc->buffer_size = le16_to_cpu(desc->buffer_size);
+    desc->buffer = le32_to_cpu(desc->buffer);
+    desc->next = le32_to_cpu(desc->next);
 }
 
 static ssize_t eth_receive(NetClientState *nc, const uint8_t *buf, size_t size)
@@ -227,22 +227,22 @@ static ssize_t eth_receive(NetClientState *nc, const uint8_t *buf, size_t size)
 
 static void eth_tx_desc_put(uint32_t addr, mv88w8618_tx_desc *desc)
 {
-    cpu_to_le32s(&desc->cmdstat);
-    cpu_to_le16s(&desc->res);
-    cpu_to_le16s(&desc->bytes);
-    cpu_to_le32s(&desc->buffer);
-    cpu_to_le32s(&desc->next);
+    desc->cmdstat = cpu_to_le32(desc->cmdstat);
+    desc->res = cpu_to_le16(desc->res);
+    desc->bytes = cpu_to_le16(desc->bytes);
+    desc->buffer = cpu_to_le32(desc->buffer);
+    desc->next = cpu_to_le32(desc->next);
     cpu_physical_memory_write(addr, desc, sizeof(*desc));
 }
 
 static void eth_tx_desc_get(uint32_t addr, mv88w8618_tx_desc *desc)
 {
     cpu_physical_memory_read(addr, desc, sizeof(*desc));
-    le32_to_cpus(&desc->cmdstat);
-    le16_to_cpus(&desc->res);
-    le16_to_cpus(&desc->bytes);
-    le32_to_cpus(&desc->buffer);
-    le32_to_cpus(&desc->next);
+    desc->cmdstat = le32_to_cpu(desc->cmdstat);
+    desc->res = le16_to_cpu(desc->res);
+    desc->bytes = le16_to_cpu(desc->bytes);
+    desc->buffer = le32_to_cpu(desc->buffer);
+    desc->next = le32_to_cpu(desc->next);
 }
 
 static void eth_send(mv88w8618_eth_state *s, int queue_index)

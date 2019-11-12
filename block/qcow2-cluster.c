@@ -2062,7 +2062,7 @@ int qcow2_expand_zero_clusters(BlockDriverState *bs,
         }
 
         for (j = 0; j < s->snapshots[i].l1_size; j++) {
-            be64_to_cpus(&l1_table[j]);
+            l1_table[j] = be64_to_cpu(l1_table[j]);
         }
 
         ret = expand_zero_clusters_in_l1(bs, l1_table, s->snapshots[i].l1_size,

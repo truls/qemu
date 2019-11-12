@@ -476,7 +476,7 @@ static int vmdk_init_tables(BlockDriverState *bs, VmdkExtent *extent,
         goto fail_l1;
     }
     for (i = 0; i < extent->l1_size; i++) {
-        le32_to_cpus(&extent->l1_table[i]);
+        extent->l1_table[i] = le32_to_cpu(extent->l1_table[i]);
     }
 
     if (extent->l1_backup_table_offset) {
@@ -496,7 +496,7 @@ static int vmdk_init_tables(BlockDriverState *bs, VmdkExtent *extent,
             goto fail_l1b;
         }
         for (i = 0; i < extent->l1_size; i++) {
-            le32_to_cpus(&extent->l1_backup_table[i]);
+            extent->l1_backup_table[i] = le32_to_cpu(extent->l1_backup_table[i]);
         }
     }
 

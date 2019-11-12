@@ -368,7 +368,7 @@ static void smi_features_ok_callback(void *opaque)
     }
 
     memcpy(&guest_features, lpc->smi_guest_features_le, sizeof guest_features);
-    le64_to_cpus(&guest_features);
+    guest_features = le64_to_cpu(guest_features);
     if (guest_features & ~lpc->smi_host_features) {
         /* guest requests invalid features, leave @features_ok at zero */
         return;

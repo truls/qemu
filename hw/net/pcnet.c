@@ -311,11 +311,11 @@ static inline void pcnet_tmd_load(PCNetState *s, struct pcnet_TMD *tmd,
         tmd->res = 0;
     } else {
         s->phys_mem_read(s->dma_opaque, addr, (void *)tmd, sizeof(*tmd), 0);
-        le32_to_cpus(&tmd->tbadr);
+        tmd->tbadr = le32_to_cpu(tmd->tbadr);
         le16_to_cpus((uint16_t *)&tmd->length);
         le16_to_cpus((uint16_t *)&tmd->status);
-        le32_to_cpus(&tmd->misc);
-        le32_to_cpus(&tmd->res);
+        tmd->misc = le32_to_cpu(tmd->misc);
+        tmd->res = le32_to_cpu(tmd->res);
         if (BCR_SWSTYLE(s) == 3) {
             uint32_t tmp = tmd->tbadr;
             tmd->tbadr = tmd->misc;
@@ -377,11 +377,11 @@ static inline void pcnet_rmd_load(PCNetState *s, struct pcnet_RMD *rmd,
         rmd->res = 0;
     } else {
         s->phys_mem_read(s->dma_opaque, addr, (void *)rmd, sizeof(*rmd), 0);
-        le32_to_cpus(&rmd->rbadr);
+        rmd->rbadr = le32_to_cpu(rmd->rbadr);
         le16_to_cpus((uint16_t *)&rmd->buf_length);
         le16_to_cpus((uint16_t *)&rmd->status);
-        le32_to_cpus(&rmd->msg_length);
-        le32_to_cpus(&rmd->res);
+        rmd->msg_length = le32_to_cpu(rmd->msg_length);
+        rmd->res = le32_to_cpu(rmd->res);
         if (BCR_SWSTYLE(s) == 3) {
             uint32_t tmp = rmd->rbadr;
             rmd->rbadr = rmd->msg_length;

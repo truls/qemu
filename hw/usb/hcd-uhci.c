@@ -675,10 +675,10 @@ static USBDevice *uhci_find_device(UHCIState *s, uint8_t addr)
 static void uhci_read_td(UHCIState *s, UHCI_TD *td, uint32_t link)
 {
     pci_dma_read(&s->dev, link & ~0xf, td, sizeof(*td));
-    le32_to_cpus(&td->link);
-    le32_to_cpus(&td->ctrl);
-    le32_to_cpus(&td->token);
-    le32_to_cpus(&td->buffer);
+    td->link = le32_to_cpu(td->link);
+    td->ctrl = le32_to_cpu(td->ctrl);
+    td->token = le32_to_cpu(td->token);
+    td->buffer = le32_to_cpu(td->buffer);
 }
 
 static int uhci_handle_td_error(UHCIState *s, UHCI_TD *td, uint32_t td_addr,
@@ -1009,7 +1009,7 @@ static void uhci_process_frame(UHCIState *s)
     frame_addr = s->fl_base_addr + ((s->frnum & 0x3ff) << 2);
 
     pci_dma_read(&s->dev, frame_addr, &link, 4);
-    le32_to_cpus(&link);
+    link = le32_to_cpu(link);
 
     int_mask = 0;
     curr_qh  = 0;
@@ -1047,8 +1047,8 @@ static void uhci_process_frame(UHCIState *s)
             }
 
             pci_dma_read(&s->dev, link & ~0xf, &qh, sizeof(qh));
-            le32_to_cpus(&qh.link);
-            le32_to_cpus(&qh.el_link);
+            qh.link = le32_to_cpu(qh.link);
+            qh.el_link = le32_to_cpu(qh.el_link);
 
             if (!is_valid(qh.el_link)) {
                 /* QH w/o elements */

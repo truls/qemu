@@ -33,11 +33,11 @@ static void virtio_gpu_cleanup_mapping(struct virtio_gpu_simple_resource *res);
 static void
 virtio_gpu_ctrl_hdr_bswap(struct virtio_gpu_ctrl_hdr *hdr)
 {
-    le32_to_cpus(&hdr->type);
-    le32_to_cpus(&hdr->flags);
-    le64_to_cpus(&hdr->fence_id);
-    le32_to_cpus(&hdr->ctx_id);
-    le32_to_cpus(&hdr->padding);
+    hdr->type = le32_to_cpu(hdr->type);
+    hdr->flags = le32_to_cpu(hdr->flags);
+    hdr->fence_id = le64_to_cpu(hdr->fence_id);
+    hdr->ctx_id = le32_to_cpu(hdr->ctx_id);
+    hdr->padding = le32_to_cpu(hdr->padding);
 }
 
 static void virtio_gpu_bswap_32(void *ptr,
@@ -63,13 +63,13 @@ static void
 virtio_gpu_t2d_bswap(struct virtio_gpu_transfer_to_host_2d *t2d)
 {
     virtio_gpu_ctrl_hdr_bswap(&t2d->hdr);
-    le32_to_cpus(&t2d->r.x);
-    le32_to_cpus(&t2d->r.y);
-    le32_to_cpus(&t2d->r.width);
-    le32_to_cpus(&t2d->r.height);
-    le64_to_cpus(&t2d->offset);
-    le32_to_cpus(&t2d->resource_id);
-    le32_to_cpus(&t2d->padding);
+    t2d->r.x = le32_to_cpu(t2d->r.x);
+    t2d->r.y = le32_to_cpu(t2d->r.y);
+    t2d->r.width = le32_to_cpu(t2d->r.width);
+    t2d->r.height = le32_to_cpu(t2d->r.height);
+    t2d->offset = le64_to_cpu(t2d->offset);
+    t2d->resource_id = le32_to_cpu(t2d->resource_id);
+    t2d->padding = le32_to_cpu(t2d->padding);
 }
 
 #ifdef CONFIG_VIRGL

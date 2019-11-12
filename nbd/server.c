@@ -345,7 +345,7 @@ static int nbd_negotiate_send_info(NBDClient *client, uint32_t opt,
     if (rc < 0) {
         return rc;
     }
-    cpu_to_be16s(&info);
+    info = cpu_to_be16(info);
     if (nbd_write(client->ioc, &info, sizeof(info), errp) < 0) {
         return -EIO;
     }
@@ -387,7 +387,7 @@ static int nbd_negotiate_handle_info(NBDClient *client, uint32_t length,
     if (nbd_read(client->ioc, &namelen, sizeof(namelen), errp) < 0) {
         return -EIO;
     }
-    be32_to_cpus(&namelen);
+    namelen = be32_to_cpu(namelen);
     length -= sizeof(namelen);
     if (namelen > length - sizeof(requests) || (length - namelen) % 2) {
         msg = "name length is incorrect";
@@ -403,7 +403,7 @@ static int nbd_negotiate_handle_info(NBDClient *client, uint32_t length,
     if (nbd_read(client->ioc, &requests, sizeof(requests), errp) < 0) {
         return -EIO;
     }
-    be16_to_cpus(&requests);
+    requests = be16_to_cpu(requests);
     length -= sizeof(requests);
     trace_nbd_negotiate_handle_info_requests(requests);
     if (requests != length / sizeof(request)) {
@@ -414,7 +414,7 @@ static int nbd_negotiate_handle_info(NBDClient *client, uint32_t length,
         if (nbd_read(client->ioc, &request, sizeof(request), errp) < 0) {
             return -EIO;
         }
-        be16_to_cpus(&request);
+        request = be16_to_cpu(request);
         length -= sizeof(request);
         trace_nbd_negotiate_handle_info_request(request,
                                                 nbd_info_lookup(request));
@@ -471,9 +471,9 @@ static int nbd_negotiate_handle_info(NBDClient *client, uint32_t length,
     /* maximum - At most 32M, but smaller as appropriate. */
     sizes[2] = MIN(blk_get_max_transfer(exp->blk), NBD_MAX_BUFFER_SIZE);
     trace_nbd_negotiate_handle_info_block_size(sizes[0], sizes[1], sizes[2]);
-    cpu_to_be32s(&sizes[0]);
-    cpu_to_be32s(&sizes[1]);
-    cpu_to_be32s(&sizes[2]);
+    sizes[0] = cpu_to_be32(sizes[0]);
+    sizes[1] = cpu_to_be32(sizes[1]);
+    sizes[2] = cpu_to_be32(sizes[2]);
     rc = nbd_negotiate_send_info(client, opt, NBD_INFO_BLOCK_SIZE,
                                  sizeof(sizes), sizes, errp);
     if (rc < 0) {
@@ -617,7 +617,7 @@ static int nbd_negotiate_options(NBDClient *client, uint16_t myflags,
         error_prepend(errp, "read failed: ");
         return -EIO;
     }
-    be32_to_cpus(&flags);
+    flags = be32_to_cpu(flags);
     trace_nbd_negotiate_options_flags(flags);
     if (flags & NBD_FLAG_C_FIXED_NEWSTYLE) {
         fixedNewstyle = true;

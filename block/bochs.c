@@ -156,7 +156,7 @@ static int bochs_open(BlockDriverState *bs, QDict *options, int flags,
     }
 
     for (i = 0; i < s->catalog_size; i++)
-	le32_to_cpus(&s->catalog_bitmap[i]);
+	s->catalog_bitmap[i] = le32_to_cpu(s->catalog_bitmap[i]);
 
     s->data_offset = le32_to_cpu(bochs.header) + (s->catalog_size * 4);
 

@@ -121,7 +121,7 @@ int qcow2_refcount_init(BlockDriverState *bs)
             goto fail;
         }
         for(i = 0; i < s->refcount_table_size; i++)
-            be64_to_cpus(&s->refcount_table[i]);
+            s->refcount_table[i] = be64_to_cpu(s->refcount_table[i]);
         update_max_refcount_table_index(s);
     }
     return 0;
@@ -667,7 +667,7 @@ int64_t qcow2_refcount_area(BlockDriverState *bs, uint64_t start_offset,
 
     /* Write refcount table to disk */
     for (i = 0; i < total_refblock_count; i++) {
-        cpu_to_be64s(&new_table[i]);
+        new_table[i] = cpu_to_be64(new_table[i]);
     }
 
     BLKDBG_EVENT(bs->file, BLKDBG_REFBLOCK_ALLOC_WRITE_TABLE);
@@ -678,7 +678,7 @@ int64_t qcow2_refcount_area(BlockDriverState *bs, uint64_t start_offset,
     }
 
     for (i = 0; i < total_refblock_count; i++) {
-        be64_to_cpus(&new_table[i]);
+        new_table[i] = be64_to_cpu(new_table[i]);
     }
 
     /* Hook up the new refcount table in the qcow2 header */
@@ -1201,7 +1201,7 @@ int qcow2_update_snapshot_refcount(BlockDriverState *bs,
         }
 
         for (i = 0; i < l1_size; i++) {
-            be64_to_cpus(&l1_table[i]);
+            l1_table[i] = be64_to_cpu(l1_table[i]);
         }
     } else {
         assert(l1_size == s->l1_size);
@@ -1344,14 +1344,14 @@ fail:
     /* Update L1 only if it isn't deleted anyway (addend = -1) */
     if (ret == 0 && addend >= 0 && l1_modified) {
         for (i = 0; i < l1_size; i++) {
-            cpu_to_be64s(&l1_table[i]);
+            l1_table[i] = cpu_to_be64(l1_table[i]);
         }
 
         ret = bdrv_pwrite_sync(bs->file, l1_table_offset,
                                l1_table, l1_size2);
 
         for (i = 0; i < l1_size; i++) {
-            be64_to_cpus(&l1_table[i]);
+            l1_table[i] = be64_to_cpu(l1_table[i]);
         }
     }
     if (l1_allocated)
@@ -1642,7 +1642,7 @@ static int check_refcounts_l1(BlockDriverState *bs,
             goto fail;
         }
         for(i = 0;i < l1_size; i++)
-            be64_to_cpus(&l1_table[i]);
+            l1_table[i] = be64_to_cpu(l1_table[i]);
     }
 
     /* Do the actual checks */
@@ -2278,7 +2278,7 @@ write_refblocks:
     }
 
     for (refblock_index = 0; refblock_index < reftable_size; refblock_index++) {
-        cpu_to_be64s(&on_disk_reftable[refblock_index]);
+        on_disk_reftable[refblock_index] = cpu_to_be64(on_disk_reftable[refblock_index]);
     }
 
     ret = qcow2_pre_write_overlap_check(bs, 0, reftable_offset,
@@ -2310,7 +2310,7 @@ write_refblocks:
     }
 
     for (refblock_index = 0; refblock_index < reftable_size; refblock_index++) {
-        be64_to_cpus(&on_disk_reftable[refblock_index]);
+        on_disk_reftable[refblock_index] = be64_to_cpu(on_disk_reftable[refblock_index]);
     }
     s->refcount_table = on_disk_reftable;
     s->refcount_table_offset = reftable_offset;
@@ -2973,14 +2973,14 @@ int qcow2_change_refcount_order(BlockDriverState *bs, int refcount_order,
     }
 
     for (i = 0; i < new_reftable_size; i++) {
-        cpu_to_be64s(&new_reftable[i]);
+        new_reftable[i] = cpu_to_be64(new_reftable[i]);
     }
 
     ret = bdrv_pwrite(bs->file, new_reftable_offset, new_reftable,
                       new_reftable_size * sizeof(uint64_t));
 
     for (i = 0; i < new_reftable_size; i++) {
-        be64_to_cpus(&new_reftable[i]);
+        new_reftable[i] = be64_to_cpu(new_reftable[i]);
     }
 
     if (ret < 0) {

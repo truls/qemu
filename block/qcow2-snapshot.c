@@ -731,7 +731,7 @@ int qcow2_snapshot_load_tmp(BlockDriverState *bs,
     s->l1_table = new_l1_table;
 
     for(i = 0;i < s->l1_size; i++) {
-        be64_to_cpus(&s->l1_table[i]);
+        s->l1_table[i] = be64_to_cpu(s->l1_table[i]);
     }
 
     return 0;
