@@ -419,6 +419,7 @@ bogus_os="no"
 # QFLEX START
 #**************************
 extsnap="no"
+extsnap_compression="gzip"
 flexus="no"
 quantum="no"
 pth="no"
@@ -1304,6 +1305,9 @@ for opt do
   ;;
   --enable-extsnap) extsnap="yes"
   ;;
+  --extsnap-compression=*)
+      extsnap_compression="$optarg"
+  ;;
   --disable-flexus) flexus="no"
   ;;
   --enable-flexus) flexus="yes"
@@ -1573,8 +1577,11 @@ disabled with --disable-FEATURE, default is enabled if available:
   # QFLEX START
   #**************************
   extsnap         support for external snapshots
+  --extsnap-compression
+                  Program to use for compressing and decompressing snapshots.
+                  Must accept standard (gzip-style) parameters.
   flexus          support for the Flexus simulator
-  quantum	        support for quantum value - no MTTCG at the moment
+  quantum         support for quantum value - no MTTCG at the moment
   pth             support for GNU Pth - The GNU Portable Threads
   #**************************
   # QFLEX END
@@ -4938,7 +4945,7 @@ if test "$crypto_afalg" = "yes"
 then
     if test "$have_afalg" != "yes"
     then
-	error_exit "AF_ALG requested but could not be detected"
+        error_exit "AF_ALG requested but could not be detected"
     fi
 fi
 
@@ -5285,10 +5292,19 @@ fi
 #**************************
 if test "$extsnap" = "yes" ; then
   QEMU_CFLAGS="-DCONFIG_EXTSNAP $QEMU_CFLAGS"
+  extsnap_compression_compress="$extsnap_compression -c"
+  extsnap_compression_decompress="$extsnap_compression -d -c"
+  res="$(echo foo | $extsnap_compression_compress | $extsnap_compression_decompress)"
+  if test "$res" != "foo"; then
+    error_exit \
+        "Selected compressor $extsnap_compression does not work as expected."\
+        "$extsnap_compression_compress does not compress data from stdin and/or"\
+        "$extsnap_compression_decompress does not decompress data from stdin."
+  fi
 fi
 if test "$flexus" = "yes" ; then
   QEMU_CFLAGS=" -ldl -DCONFIG_FLEXUS $QEMU_CFLAGS"
-  LIBS="-ldl $LIBS" 
+  LIBS="-ldl $LIBS"
 fi
 if test "$quantum" = "yes" ; then
   QEMU_CFLAGS="-DCONFIG_QUANTUM $QEMU_CFLAGS"
@@ -5494,6 +5510,7 @@ echo "#**************************"
 echo "# QFLEX START"
 echo "#**************************"
 echo "external snapshots $extsnap"
+echo "external snapshot compression $extsnap_compression"
 echo "Flexus support     $flexus"
 echo "Quantum support    $quantum"
 echo "GNU Pth            $pth"
@@ -6508,6 +6525,7 @@ fi
 #**************************
 if test "$extsnap" = "yes" ; then
   echo "CONFIG_EXTSNAP=y" >> $config_host_mak
+  echo "CONFIG_EXTSNAP_COMPRESSOR=$extsnap_compression_compress" >> $config_host_mak
 fi
 if test "$flexus" = "yes" ; then
   echo "CONFIG_FLEXUS=y" >> $config_host_mak

@@ -63,8 +63,15 @@
 #include "qemu-file-channel.h"
 #include "qemu-file.h"
 
-const char *input_command = "gunzip -c";
-const char *output_command = "gzip -c";
+#ifndef CONFIG_EXTSNAP_COMPRESSOR
+#define CONFIG_EXTSNAP_COMPRESSOR gzip
+#endif
+#define EXTSNAP_STR_(s) #s
+#define EXTSNAP_STR(s) EXTSNAP_STR_(s)
+// Decompression command. Defaults to gzip -c -d
+const char *input_command = EXTSNAP_STR(CONFIG_EXTSNAP_COMPRESSOR) " -c -d";
+// Compression command. Defaults to gzip -c
+const char *output_command = EXTSNAP_STR(CONFIG_EXTSNAP_COMPRESSOR) " -c";
 
 static int qemu_savevm_state(QEMUFile *f, Error **errp)
 {
