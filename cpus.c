@@ -57,6 +57,8 @@
 #endif /* CONFIG_FLEXUS */
 
 #ifdef CONFIG_FLEXUS
+#include <dirent.h>
+
 #include "../libqflex/flexus_proxy.h"
 #include "../libqflex/api.h"
 
