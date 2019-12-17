@@ -2051,7 +2051,7 @@ int bdrv_is_allocated_above(BlockDriverState *top,
 
     intermediate = top;
     while (intermediate && intermediate != base) {
-        int64_t pnum_inter;
+        int64_t pnum_inter = 0;
         int64_t size_inter;
 
         ret = bdrv_is_allocated(intermediate, offset, bytes, &pnum_inter);

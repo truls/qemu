@@ -2225,7 +2225,11 @@ static void help_oneline(const char *cmd, const cmdinfo_t *ct)
     if (cmd) {
         printf("%s ", cmd);
     } else {
-        printf("%s ", ct->name);
+        if (ct->name) {
+            printf("%s ", ct->name);
+        } else {
+            printf("(null) ");
+        }
         if (ct->altname) {
             printf("(or %s) ", ct->altname);
         }
@@ -2250,7 +2254,9 @@ static void help_all(void)
     const cmdinfo_t *ct;
 
     for (ct = cmdtab; ct < &cmdtab[ncmds]; ct++) {
-        help_oneline(ct->name, ct);
+        if (ct) {
+            help_oneline(ct->name, ct);
+        }
     }
     printf("\nUse 'help commandname' for extended help.\n");
 }
